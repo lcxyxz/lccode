@@ -50,6 +50,10 @@ export function useSlashCommands(initialInput: string) {
     return filteredCommandsRef.current[selectedIndexRef.current] || null
   }, [])
 
+  const dismiss = useCallback(() => {
+    setShowSuggestions(false)
+  }, [])
+
   return {
     showSuggestions,
     selectedIndex,
@@ -58,5 +62,6 @@ export function useSlashCommands(initialInput: string) {
     selectUp,
     selectDown,
     getSelectedCommand,
+    dismiss,
   }
 }

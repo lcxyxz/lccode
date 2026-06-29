@@ -1,11 +1,7 @@
 import { Box, Text } from 'ink'
 import type { LLMStatus } from '../../types/index.js'
-import type { TerminalMode } from '../useTerminal.js'
 
-/**
- * 状态栏组件
- */
-export function StatusLine({ llmStatus, mode, modelName }: { llmStatus: LLMStatus; mode: TerminalMode; modelName?: string }) {
+export function StatusLine({ llmStatus, modelName }: { llmStatus: LLMStatus; modelName?: string }) {
   const statusColor = {
     idle: 'gray',
     loading: 'yellow',
@@ -16,12 +12,12 @@ export function StatusLine({ llmStatus, mode, modelName }: { llmStatus: LLMStatu
   return (
     <Box justifyContent="space-between" paddingTop={1}>
       <Text color="gray">
-        {modelName || 'AI'} │ {mode === 'visual' ? '↑↓ Navigate │ Enter/Space Toggle │ Esc Insert' : 'Esc Visual │ Ctrl+C Exit'}
+        {modelName || 'AI'} │ Ctrl+C Exit
       </Text>
       <Text color={statusColor}>
-        {llmStatus === 'loading' ? '⟳ Thinking...' :
-         llmStatus === 'done' ? '✓ Ready' :
-         llmStatus === 'error' ? '✗ Error' : '○ Idle'}
+        {llmStatus === 'loading' ? 'Thinking...' :
+         llmStatus === 'done' ? 'Ready' :
+         llmStatus === 'error' ? 'Error' : 'Idle'}
       </Text>
     </Box>
   )
