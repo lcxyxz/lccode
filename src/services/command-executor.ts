@@ -114,3 +114,24 @@ export function parseExecTag(text: string): { before: string; command: string; a
     after: match[3].trim(),
   }
 }
+
+/**
+ * 检测是否包含 <finish> 标签
+ */
+export function hasFinishTag(text: string): boolean {
+  return /<finish>/.test(text)
+}
+
+/**
+ * 解析 <finish> 标签内容
+ */
+export function parseFinishTag(text: string): { before: string; content: string; after: string } | null {
+  const match = text.match(/^(.*?)<finish>([\s\S]*?)<\/finish>(.*)$/)
+  if (!match) return null
+
+  return {
+    before: match[1].trim(),
+    content: match[2].trim(),
+    after: match[3].trim(),
+  }
+}
