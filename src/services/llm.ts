@@ -1,7 +1,6 @@
 /**
  * LLM 服务模块
  * 支持多种模型接口，当前实现 DeepSeek（兼容 OpenAI 格式）
- * 支持深度思考模型（如 DeepSeek）的思考过程展示
  */
 
 import { readFileSync } from 'node:fs'
@@ -81,7 +80,8 @@ export class DeepSeekProvider {
       const delta = chunk.choices[0]?.delta
       if (delta?.reasoning_content) {
         reasoningContent += delta.reasoning_content
-      } else if (delta?.content) {
+      }
+      if (delta?.content) {
         content += delta.content
       }
     }

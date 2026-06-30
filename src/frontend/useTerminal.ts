@@ -68,7 +68,6 @@ export function useTerminal(onExit?: () => void) {
     const agent = agentRef.current
     if (!agent) {
       actionsRef.current.addMessage('Error: DEEPSEEK_API_KEY not set.', 'yellow')
-      setLlmStatus('idle')
       return
     }
 
@@ -97,7 +96,6 @@ export function useTerminal(onExit?: () => void) {
         }
       }
 
-      trimSections(50)
       setLlmStatus('done')
     } catch (error: any) {
       const msg = error?.message || 'Unknown error'
