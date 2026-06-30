@@ -8,6 +8,8 @@ export function useOutput() {
   ])
 
   const idCounterRef = useRef(2)
+  const commandListIdRef = useRef<number | null>(null)
+  const commandEntriesRef = useRef<Array<{ command: string; success: boolean }>>([])
 
   const addMessage = useCallback((content: string, color?: OutputSection['color']) => {
     const id = idCounterRef.current++
@@ -17,12 +19,26 @@ export function useOutput() {
   }, [])
 
   const addCommandResult = useCallback((command: string, _output: string, success: boolean) => {
-    const id = idCounterRef.current++
-    setSections(prev => [...prev, {
-      id, type: 'command', title: '',
-      content: `$ ${command ?? ''}`,
-      collapsed: false, color: success ? 'green' : 'red',
-    }])
+    commandEntriesRef.current.push({ command, success })
+    const lines = commandEntriesRef.current
+      .map(e => `$ ${e.command}`)
+      .join('\n')
+    const allSuccess = commandEntriesRef.current.every(e => e.success)
+
+    setSections(prev => {
+      // 移除旧的命令列表 section
+      const filtered = commandListIdRef.current !== null
+        ? prev.filter(s => s.id !== commandListIdRef.current)
+        : prev
+      // 创建新的命令列表 section
+      const id = commandListIdRef.current ?? idCounterRef.current++
+      commandListIdRef.current = id
+      return [...filtered, {
+        id, type: 'command', title: '',
+        content: lines,
+        collapsed: false, color: allSuccess ? 'green' : 'red',
+      }]
+    })
   }, [])
 
   const addResponse = useCallback((content: string) => {
@@ -33,7 +49,18 @@ export function useOutput() {
   }, [])
 
   const clearSections = useCallback(() => {
+    commandListIdRef.current = null
+    commandEntriesRef.current = []
     setSections([])
+  }, [])
+
+  const resetCommandList = useCallback(() => {
+    const oldId = commandListIdRef.current
+    commandListIdRef.current = null
+    commandEntriesRef.current = []
+    if (oldId !== null) {
+      setSections(prev => prev.filter(s => s.id !== oldId))
+    }
   }, [])
 
   const trimSections = useCallback((maxSections: number) => {
@@ -49,6 +76,7 @@ export function useOutput() {
     addCommandResult,
     addResponse,
     clearSections,
+    resetCommandList,
     trimSections,
   }
 }

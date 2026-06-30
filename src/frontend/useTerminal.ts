@@ -10,7 +10,7 @@ import type { LLMStatus } from '../types/index.js'
 export function useTerminal(onExit?: () => void) {
   const {
     sections, addMessage, addCommandResult, addResponse,
-    clearSections, trimSections,
+    clearSections, resetCommandList, trimSections,
   } = useOutput()
   const { addHistory, navigateUp } = useCommandHistory()
   const slash = useSlashCommands('')
@@ -39,6 +39,7 @@ export function useTerminal(onExit?: () => void) {
     addResponse,
     addHistory,
     clearSections,
+    resetCommandList,
     trimSections,
   })
 
@@ -48,6 +49,7 @@ export function useTerminal(onExit?: () => void) {
     addResponse,
     addHistory,
     clearSections,
+    resetCommandList,
     trimSections,
   }
 
@@ -71,6 +73,7 @@ export function useTerminal(onExit?: () => void) {
       return
     }
 
+    actionsRef.current.resetCommandList()
     setLlmStatus('loading')
 
     try {

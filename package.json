@@ -2,6 +2,9 @@
   "name": "ink-terminal-assistant",
   "version": "1.0.0",
   "description": "Mini terminal programming assistant built with Ink",
+  "bin": {
+    "lccode": "./dist/cli.js"
+  },
   "type": "module",
   "scripts": {
     "start": "tsx src/cli.tsx",

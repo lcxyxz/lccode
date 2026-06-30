@@ -87,7 +87,7 @@ describe('Agent', () => {
       events.push(event)
     }
 
-    // 应该有命令执行事件
+    // 应该有命令执行事件（仅首次实际执行）
     const commandEvents = events.filter(e => e.type === 'command')
     expect(commandEvents.length).toBe(1)
     expect(commandEvents[0].metadata?.success).toBe(true)

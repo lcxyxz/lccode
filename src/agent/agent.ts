@@ -168,19 +168,16 @@ export class Agent {
         const tool = this.registry.get(parsed.toolName)
 
         if (!tool) {
-          // 工具不存在，告知 LLM
           const errorMsg = `错误：工具 "${parsed.toolName}" 不存在。可用工具：${this.registry.getAll().map(t => t.name).join(', ')}`
           this.chatHistory.push({ role: 'assistant', content: llmResult.response })
           this.chatHistory.push({ role: 'user', content: errorMsg })
           continue
         }
 
-        // 执行工具
         debugLog(`Executing tool: ${parsed.toolName}`, JSON.stringify(parsed.params))
         const result = await tool.execute(parsed.params || {})
         debugLog(`Tool result:`, JSON.stringify(result))
 
-        // 输出工具执行信息
         const commandStr = `${parsed.toolName}(${Object.entries(parsed.params || {}).map(([k, v]) => `${k}="${v}"`).join(', ')})`
         yield {
           type: 'command',
@@ -192,7 +189,6 @@ export class Agent {
           },
         }
 
-        // 将执行结果加入对话历史
         const resultMsg = result.success
           ? `工具执行成功，输出如下：\n\`\`\`\n${result.output}\n\`\`\``
           : `工具执行失败：${result.error || result.output}`

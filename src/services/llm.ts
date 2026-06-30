@@ -52,7 +52,6 @@ export class DeepSeekProvider {
         model: this.model,
         messages: fullMessages,
         stream: true,
-        reasoning_effort: 'high',
       } as OpenAI.ChatCompletionCreateParamsStreaming,
       { signal: options?.signal }
     )

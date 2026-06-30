@@ -18,23 +18,46 @@
 npm install
 ```
 
-### 配置环境变量
+### 配置
 
-复制 `.env.example` 为 `.env`，并填入你的 API 密钥：
+在用户家目录下创建 `.lccode.json` 配置文件：
 
 ```bash
-cp .env.example .env
+cat > ~/.lccode.json << 'EOF'
+{
+  "apiKey": "your-api-key",
+  "baseUrl": "https://api.deepseek.com",
+  "model": "deepseek-v4-flash"
+}
+EOF
 ```
 
-编辑 `.env` 文件：
+配置项说明：
 
-```env
-DEEPSEEK_API_KEY=your-api-key
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-v4-flash
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `apiKey` | 是 | DeepSeek API 密钥 |
+| `baseUrl` | 否 | API 地址，默认 `https://api.deepseek.com` |
+| `model` | 否 | 模型名称，默认 `deepseek-v4-flash` |
+
+> 如果 `~/.lccode.json` 不存在，程序会回退读取项目目录下的 `.env` 文件。
+
+### 全局安装（推荐）
+
+构建项目后，通过软链接注册全局命令：
+
+```bash
+npm run build
+npm link
 ```
 
-### 运行
+之后在任意目录下直接运行：
+
+```bash
+lccode
+```
+
+### 本地运行
 
 ```bash
 npm start
@@ -65,6 +88,7 @@ lccode/
 │   ├── frontend/        # Ink 组件
 │   ├── services/        # API 服务
 │   ├── types/           # TypeScript 类型
+│   ├── config.ts        # 配置加载（读取 ~/.lccode.json）
 │   ├── app.tsx          # 主应用组件
 │   └── cli.tsx          # CLI 入口
 ├── test/                # 测试文件
@@ -78,6 +102,16 @@ lccode/
 - **AI 服务**: DeepSeek API
 - **构建工具**: TypeScript + tsx
 - **测试**: Vitest
+
+## 常见问题
+
+**Q: 启动时报 `Raw mode is not supported` 错误？**
+
+这是因为程序需要在交互式终端中运行。请直接在终端中执行 `lccode`，不要通过管道或其他非 TTY 方式调用。
+
+**Q: 如何更换模型或 API Key？**
+
+编辑 `~/.lccode.json` 文件即可，修改后下次启动自动生效。
 
 ## 写在后面
 
