@@ -3,20 +3,9 @@
  * 支持多种模型接口，当前实现 DeepSeek（兼容 OpenAI 格式）
  */
 
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
 import OpenAI from 'openai'
 import type { ChatCompletionChunk } from 'openai/resources/chat/completions'
 import type { ChatResult } from '../types/index.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-function loadSystemPrompt(): string {
-  const promptPath = join(__dirname, '../prompts/system.md')
-  return readFileSync(promptPath, 'utf-8').trim()
-}
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -52,15 +41,11 @@ export class DeepSeekProvider {
   }
 
   async chat(messages: ChatMessage[], options?: { signal?: AbortSignal }): Promise<ChatResult> {
-    const systemPrompt = loadSystemPrompt()
-    const fullMessages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: 'system', content: systemPrompt },
-      ...messages.map(m => ({
-        role: m.role as 'system' | 'user' | 'assistant',
-        content: m.content,
-        ...(m.reasoning_content && { reasoning_content: m.reasoning_content }),
-      })),
-    ]
+    const fullMessages: OpenAI.ChatCompletionMessageParam[] = messages.map(m => ({
+      role: m.role as 'system' | 'user' | 'assistant',
+      content: m.content,
+      ...(m.reasoning_content && { reasoning_content: m.reasoning_content }),
+    }))
 
     const stream = await this.client.chat.completions.create(
       {

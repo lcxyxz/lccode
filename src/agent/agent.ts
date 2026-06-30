@@ -13,8 +13,8 @@ function debugLog(...lines: string[]) {
   appendFileSync(DEBUG_LOG, lines.join('\n') + '\n')
 }
 
-function loadSystemPrompt(): string {
-  const promptPath = join(__dirname, '../prompts/system.md')
+export function loadSystemPrompt(): string {
+  const promptPath = join(__dirname, './prompts/system.md')
   return readFileSync(promptPath, 'utf-8').trim()
 }
 
@@ -22,9 +22,18 @@ export class Agent {
   private provider: DeepSeekProvider
   private chatHistory: ChatMessage[] = []
   private maxHistory = 20
+  private systemPrompt: string
 
   constructor(config: AgentConfig) {
     this.provider = new DeepSeekProvider(config)
+    this.systemPrompt = loadSystemPrompt()
+  }
+
+  private buildMessages(): ChatMessage[] {
+    return [
+      { role: 'system', content: this.systemPrompt },
+      ...this.chatHistory,
+    ]
   }
 
   async *processInput(query: string): AsyncGenerator<AgentEvent> {
@@ -32,7 +41,7 @@ export class Agent {
     let round = 0
     this.chatHistory.push({ role: 'user', content: query })
 
-    let llmResult = await this.provider.chat(this.chatHistory)
+    let llmResult = await this.provider.chat(this.buildMessages())
     debugLog(`=== Round ${round} LLM response:`, llmResult.response)
     if (llmResult.thinking) {
       yield { type: 'thinking', content: llmResult.thinking }
@@ -74,7 +83,7 @@ export class Agent {
       this.chatHistory.push({ role: 'user', content: resultMsg })
 
       debugLog(`=== Round ${round} LLM call, history length: ${this.chatHistory.length}`)
-      llmResult = await this.provider.chat(this.chatHistory)
+      llmResult = await this.provider.chat(this.buildMessages())
       debugLog(`=== Round ${round} LLM response:`, llmResult.response)
       if (llmResult.thinking) {
         debugLog(`=== Round ${round} LLM thinking:`, llmResult.thinking)
