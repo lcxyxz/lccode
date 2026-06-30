@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink'
 import type { OutputSection as OutputSectionType } from '../../types/index.js'
+import Markdown from './Markdown.js'
 
 const MAX_CONTENT_LENGTH = 10000
 
@@ -18,6 +19,14 @@ export function OutputSection({ section }: OutputSectionProps) {
     : content
 
   const safeColor = color || (type === 'command' ? 'green' : type === 'response' ? 'white' : 'gray')
+
+  if (type === 'response') {
+    return (
+      <Box flexDirection="column" marginBottom={1}>
+        <Markdown>{truncatedContent}</Markdown>
+      </Box>
+    )
+  }
 
   return (
     <Box flexDirection="column" marginBottom={1}>
