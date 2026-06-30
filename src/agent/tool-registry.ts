@@ -53,36 +53,3 @@ export class ToolRegistry {
     }).join('\n\n')
   }
 }
-
-// ===================== 内置工具 =====================
-
-import { executeCommand } from '../services/command-executor.js'
-
-/**
- * 执行命令工具
- */
-export const executeCommandTool: Tool = {
-  name: 'execute_command',
-  description: '执行 Linux/Unix 命令并返回输出结果',
-  parameters: [
-    {
-      name: 'command',
-      type: 'string',
-      description: '要执行的命令，例如: ls -la, cat file.txt, git status',
-      required: true,
-    },
-  ],
-  execute: async (params) => {
-    const result = await executeCommand(params.command)
-    const rawOutput = result.stdout || result.stderr || '(无输出)'
-    const maxOutputLen = 3000
-    const output = rawOutput.length > maxOutputLen
-      ? rawOutput.slice(0, maxOutputLen) + `\n... (输出被截断，原始长度 ${rawOutput.length} 字符)`
-      : rawOutput
-    return {
-      success: result.success,
-      output,
-      error: result.error,
-    }
-  },
-}

@@ -7,7 +7,7 @@ if (config) {
   if (config.baseUrl) process.env.DEEPSEEK_BASE_URL = config.baseUrl
   if (config.model) process.env.DEEPSEEK_MODEL = config.model
 } else {
-  try { await import('dotenv/config') } catch {}
+  throw new Error("请先配置模型！！！")
 }
 
 import { render } from 'ink'

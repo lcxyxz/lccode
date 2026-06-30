@@ -5,7 +5,9 @@
 
 import { writeFileSync, appendFileSync } from 'node:fs'
 import { DeepSeekProvider, type ChatMessage } from '../services/llm.js'
-import { ToolRegistry, executeCommandTool } from './tool-registry.js'
+import { ToolRegistry } from './tool-registry.js'
+import { executeCommandTool } from './tools/command-tool.js'
+import { readFileTool, writeFileTool, editFileTool, deleteFileTool, deleteDirectoryTool } from './tools/file-tools.js'
 import { buildSystemPrompt } from './prompt-template.js'
 import type { AgentConfig, AgentEvent } from '../types/index.js'
 
@@ -77,6 +79,11 @@ export class Agent {
     this.provider = new DeepSeekProvider(config)
     this.registry = new ToolRegistry()
     this.registry.register(executeCommandTool)
+    this.registry.register(readFileTool)
+    this.registry.register(writeFileTool)
+    this.registry.register(editFileTool)
+    this.registry.register(deleteFileTool)
+    this.registry.register(deleteDirectoryTool)
   }
 
   /**
@@ -94,6 +101,10 @@ export class Agent {
     const systemPrompt = buildSystemPrompt(this.registry, {
       history: this.chatHistory,
     })
+
+    // 打印系统提示词便于调试
+    debugLog(`SystemPrompt:`,systemPrompt);
+    
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
     ]
@@ -101,6 +112,9 @@ export class Agent {
     if (isFirstRound && this.chatHistory.length > 0) {
       messages.push(this.chatHistory[0])
     }
+
+ 
+
     return messages
   }
 

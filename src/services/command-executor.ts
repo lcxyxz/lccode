@@ -8,13 +8,12 @@ import { promisify } from 'node:util'
 
 const execAsync = promisify(exec)
 
-/** 安全命令白名单 */
+/** 安全命令白名单（仅允许只读命令） */
 const SAFE_COMMANDS = [
-  'ls', 'pwd', 'cd', 'cat', 'grep', 'find', 'head', 'tail', 'wc', 'echo',
-  'ps', 'top', 'df', 'du', 'free', 'uname', 'whoami', 'date', 'cal',
-  'git', 'npm', 'node', 'python', 'python3', 'pip', 'npx',
-  'curl', 'wget', 'tar', 'zip', 'unzip',
-  'mkdir', 'touch', 'cp', 'mv',
+  'ls', 'pwd', 'cat', 'grep', 'find', 'head', 'tail', 'wc', 'echo',
+  'ps', 'df', 'du', 'free', 'uname', 'whoami', 'date', 'cal',
+  'git', 'git log', 'git diff', 'git status', 'git show',
+  'which', 'file', 'stat', 'tree',
 ]
 
 /** 危险命令黑名单 */
@@ -26,6 +25,11 @@ const DANGEROUS_PATTERNS = [
   /dd\s+if=/,
   /:\(\)\{.*\|.*&\s*\}:/,
   /chmod\s+777/,
+  /\|\s*tee\b/,
+  />\s*\S+/,           // shell 重定向 >
+  />>\s*\S+/,          // 追加重定向 >>
+  /<\s*\S+/,           // 输入重定向 <
+  /\|\s*(bash|sh)\b/,  // 管道到 shell
 ]
 
 export interface CommandResult {

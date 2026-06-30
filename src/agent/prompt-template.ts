@@ -79,6 +79,13 @@ ToolCall[工具名](参数名="参数值")
 示例：
 - ToolCall[execute_command](command="ls -la")
 - ToolCall[execute_command](command="cat package.json")
+- ToolCall[read_file](file_path="src/app.tsx")
+- ToolCall[read_file](file_path="src/app.tsx", start_line="10", end_line="30")
+- ToolCall[write_file](file_path="src/utils.ts", content="export function add(a: number, b: number) { return a + b }")
+- ToolCall[edit_file](file_path="src/app.tsx", old_text="const x = 1", new_text="const x = 2")
+- ToolCall[edit_file](file_path="src/app.tsx", start_line="5", end_line="8", new_text="新内容")
+- ToolCall[delete_file](file_path="src/old-file.ts")
+- ToolCall[delete_directory](dir_path="src/old-folder")
 
 **2. 结束任务：**
 
@@ -93,9 +100,14 @@ Finish[最终答案]
    - 如果足够，使用 Finish[...] 输出最终答案
    - 如果不够，继续调用其他工具
 4. 不要重复执行相同的命令，如果已经获取到结果就直接 Finish
-5. 不要执行危险命令（rm -rf /, sudo rm 等）
-7. 不能一次性执行多个命令。
+5. 不能一次性执行多个命令
 6. 使用中文回答
+
+## 工具使用规范
+
+- **execute_command** 是只读工具，仅用于探索文件系统、查看文件内容、搜索代码、检查 Git 状态等。禁止通过它执行任何修改操作（如 mkdir、touch、cp、mv、rm、echo >、sed -i 等）。
+- **read_file / write_file / edit_file** 是文件操作工具，所有文件的读取、创建、修改都必须通过这三个工具完成。
+- 不要尝试用 execute_command 绕过文件操作限制。
 
 ${referenceManual ? `\n## 参考手册\n\n${referenceManual}\n` : ''}
 ## 对话历史
