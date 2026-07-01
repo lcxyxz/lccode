@@ -74,6 +74,7 @@ export class Agent {
   private registry: ToolRegistry
   private chatHistory: ChatMessage[] = []
   private maxHistory = 20
+  private currentQueryStartIndex = 0
 
   constructor(config: AgentConfig) {
     this.provider = new DeepSeekProvider(config)
@@ -98,6 +99,10 @@ export class Agent {
    * @param isFirstRound 是否是第一轮（需要传入原始问题）
    */
   private buildMessages(isFirstRound: boolean): ChatMessage[] {
+    // 当前查询的消息范围，用于构建 messages 数组（传给 LLM API）
+    const currentMessages = this.chatHistory.slice(this.currentQueryStartIndex)
+
+    // system prompt 中的对话历史包含所有历史记录，让 LLM 有完整上下文
     const systemPrompt = buildSystemPrompt(this.registry, {
       history: this.chatHistory,
     })
@@ -108,12 +113,10 @@ export class Agent {
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
     ]
-    // 只在第一轮添加用户问题，后续轮次依赖 chatHistory
-    if (isFirstRound && this.chatHistory.length > 0) {
-      messages.push(this.chatHistory[0])
+    // 只在第一轮添加当前查询的用户问题，后续轮次依赖 chatHistory
+    if (isFirstRound && currentMessages.length > 0) {
+      messages.push(currentMessages[0])
     }
-
- 
 
     return messages
   }
@@ -124,7 +127,9 @@ export class Agent {
   private pushAssistant(content: string) {
     this.chatHistory.push({ role: 'assistant', content: content })
     if (this.chatHistory.length > this.maxHistory) {
+      const trimmed = this.chatHistory.length - this.maxHistory
       this.chatHistory = this.chatHistory.slice(-this.maxHistory)
+      this.currentQueryStartIndex = Math.max(0, this.currentQueryStartIndex - trimmed)
     }
   }
 
@@ -137,6 +142,8 @@ export class Agent {
     let round = 0
     let isFirstRound = true
 
+    // 记录当前查询在 chatHistory 中的起始位置，隔离不同查询的上下文
+    this.currentQueryStartIndex = this.chatHistory.length
     this.chatHistory.push({ role: 'user', content: query })
 
     while (round < maxRounds) {
@@ -152,6 +159,15 @@ export class Agent {
       // 输出思考过程（LLM 的原生 thinking）
       if (llmResult.thinking) {
         yield { type: 'thinking', content: llmResult.thinking }
+      }
+
+      // 输出 token 用量
+      if (llmResult.usage) {
+        yield {
+          type: 'token_usage',
+          content: '',
+          usage: llmResult.usage,
+        }
       }
 
       // 解析响应
@@ -184,7 +200,7 @@ export class Agent {
         if (!tool) {
           const errorMsg = `错误：工具 "${parsed.toolName}" 不存在。可用工具：${this.registry.getAll().map(t => t.name).join(', ')}`
           this.chatHistory.push({ role: 'assistant', content: llmResult.response })
-          this.chatHistory.push({ role: 'user', content: errorMsg })
+          this.chatHistory.push({ role: 'user', content: `[ToolExeInfo] ${errorMsg}` })
           continue
         }
 
@@ -208,7 +224,7 @@ export class Agent {
           : `工具执行失败：${result.error || result.output}`
 
         this.chatHistory.push({ role: 'assistant', content: llmResult.response })
-        this.chatHistory.push({ role: 'user', content: resultMsg })
+        this.chatHistory.push({ role: 'user', content: `[ToolExeInfo] ${resultMsg}` })
       }
     }
 

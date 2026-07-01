@@ -5,7 +5,7 @@ import { useCommandHistory } from './hooks/useCommandHistory.js'
 import { useSlashCommands } from './hooks/useSlashCommands.js'
 import { processCommand } from './commands.js'
 import { Agent } from '../agent/agent.js'
-import type { LLMStatus } from '../types/index.js'
+import type { LLMStatus, TokenUsage } from '../types/index.js'
 
 export function useTerminal(onExit?: () => void) {
   const {
@@ -17,6 +17,7 @@ export function useTerminal(onExit?: () => void) {
 
   const [llmStatus, setLlmStatus] = useState<LLMStatus>('idle')
   const [input, setInput] = useState('')
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ promptTokens: 0, completionTokens: 0, totalTokens: 0 })
   const agentRef = useRef<Agent | null>(null)
   const inputRef = useRef('')
 
@@ -60,6 +61,8 @@ export function useTerminal(onExit?: () => void) {
   onExitRef.current = onExit
 
   const setInputValueRef = useRef<(value: string) => void>(() => {})
+  const showSuggestionsRef = useRef(false)
+  showSuggestionsRef.current = slash.showSuggestions
 
   const handleCtrlC = useCallback(() => {
     actionsRef.current.addMessage('Goodbye!', 'cyan')
@@ -96,6 +99,15 @@ export function useTerminal(onExit?: () => void) {
           case 'error':
             actionsRef.current.addMessage(event.content ?? 'Unknown error', 'yellow')
             break
+          case 'token_usage':
+            if (event.usage) {
+              setTokenUsage((prev) => ({
+                promptTokens: prev.promptTokens + event.usage!.promptTokens,
+                completionTokens: prev.completionTokens + event.usage!.completionTokens,
+                totalTokens: prev.totalTokens + event.usage!.totalTokens,
+              }))
+            }
+            break
         }
       }
 
@@ -108,6 +120,7 @@ export function useTerminal(onExit?: () => void) {
   }, [])
 
   const handleSubmit = useCallback((line: string) => {
+    if (showSuggestionsRef.current) return
     if (!line.trim()) return
 
     const action = processCommand(line, {
@@ -153,6 +166,15 @@ export function useTerminal(onExit?: () => void) {
       return
     }
 
+    if (key.return && slashRef.current.showSuggestions) {
+      const cmd = slashRef.current.getSelectedCommand()
+      if (cmd) {
+        setInputValueRef.current(cmd)
+      }
+      slashRef.current.dismiss()
+      return
+    }
+
     if (key.escape && slashRef.current.showSuggestions) {
       slashRef.current.dismiss()
       return
@@ -177,6 +199,7 @@ export function useTerminal(onExit?: () => void) {
     sections,
     input,
     llmStatus,
+    tokenUsage,
     handleSubmit,
     handleChange,
     showSuggestions: slash.showSuggestions,

@@ -1,7 +1,13 @@
 import { Box, Text } from 'ink'
-import type { LLMStatus } from '../../types/index.js'
+import type { LLMStatus, TokenUsage } from '../../types/index.js'
 
-export function StatusLine({ llmStatus, modelName }: { llmStatus: LLMStatus; modelName?: string }) {
+interface StatusLineProps {
+  llmStatus: LLMStatus
+  modelName?: string
+  tokenUsage?: TokenUsage
+}
+
+export function StatusLine({ llmStatus, modelName, tokenUsage }: StatusLineProps) {
   const statusColor = {
     idle: 'gray',
     loading: 'yellow',
@@ -9,16 +15,28 @@ export function StatusLine({ llmStatus, modelName }: { llmStatus: LLMStatus; mod
     error: 'red',
   }[llmStatus]
 
+  const formatTokens = (n: number) => {
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+    return String(n)
+  }
+
   return (
     <Box justifyContent="space-between" paddingTop={1}>
       <Text color="gray">
         {modelName || 'AI'} │ Ctrl+C Exit
       </Text>
-      <Text color={statusColor}>
-        {llmStatus === 'loading' ? 'Thinking...' :
-         llmStatus === 'done' ? 'Ready' :
-         llmStatus === 'error' ? 'Error' : 'Idle'}
-      </Text>
+      <Box>
+        {tokenUsage && tokenUsage.totalTokens > 0 && (
+          <Text color="gray">
+            Prompt: {formatTokens(tokenUsage.promptTokens)} │ Completion: {formatTokens(tokenUsage.completionTokens)} │ Total: {formatTokens(tokenUsage.totalTokens)} │{' '}
+          </Text>
+        )}
+        <Text color={statusColor}>
+          {llmStatus === 'loading' ? 'Thinking...' :
+           llmStatus === 'done' ? 'Ready' :
+           llmStatus === 'error' ? 'Error' : 'Idle'}
+        </Text>
+      </Box>
     </Box>
   )
 }

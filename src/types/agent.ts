@@ -1,10 +1,15 @@
 export interface AgentEvent {
-  type: 'thinking' | 'command' | 'response' | 'error'
+  type: 'thinking' | 'command' | 'response' | 'error' | 'token_usage'
   content: string
   metadata?: {
     command?: string
     commandOutput?: string
     success?: boolean
+  }
+  usage?: {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
   }
 }
 

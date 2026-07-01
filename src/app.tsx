@@ -35,7 +35,7 @@ class ErrorBoundary extends Component<
 
 function AppContent({ onExit }: { onExit?: () => void }) {
   const {
-    sections, input, llmStatus, handleSubmit, handleChange,
+    sections, input, llmStatus, tokenUsage, handleSubmit, handleChange,
     showSuggestions, filteredCommands, selectedIndex,
   } = useTerminal(onExit)
 
@@ -54,7 +54,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
         onSubmit={handleSubmit}
         llmStatus={llmStatus}
       />
-      <StatusLine llmStatus={llmStatus} modelName={process.env.DEEPSEEK_MODEL || 'AI'} />
+      <StatusLine llmStatus={llmStatus} modelName={process.env.DEEPSEEK_MODEL || 'AI'} tokenUsage={tokenUsage} />
     </Box>
   )
 }

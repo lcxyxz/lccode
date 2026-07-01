@@ -5,7 +5,7 @@
 
 import OpenAI from 'openai'
 import type { ChatCompletionChunk } from 'openai/resources/chat/completions'
-import type { ChatResult } from '../types/index.js'
+import type { ChatResult, TokenUsage } from '../types/index.js'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -52,12 +52,14 @@ export class DeepSeekProvider {
         model: this.model,
         messages: fullMessages,
         stream: true,
+        stream_options: { include_usage: true },
       } as OpenAI.ChatCompletionCreateParamsStreaming,
       { signal: options?.signal }
     )
 
     let reasoningContent = ''
     let content = ''
+    let usage: TokenUsage | undefined
 
     for await (const rawChunk of stream) {
       const chunk = rawChunk as DeepSeekChunk
@@ -68,15 +70,22 @@ export class DeepSeekProvider {
       if (delta?.content) {
         content += delta.content
       }
-    }
-
-    if (reasoningContent) {
-      return {
-        response: content,
-        thinking: reasoningContent.trim() || undefined,
+      if (chunk.usage) {
+        usage = {
+          promptTokens: chunk.usage.prompt_tokens,
+          completionTokens: chunk.usage.completion_tokens,
+          totalTokens: chunk.usage.total_tokens,
+        }
       }
     }
 
-    return { response: content }
+    const result: ChatResult = { response: content }
+    if (reasoningContent) {
+      result.thinking = reasoningContent.trim() || undefined
+    }
+    if (usage) {
+      result.usage = usage
+    }
+    return result
   }
 }

@@ -20,10 +20,18 @@ export type CommandAction =
 /** LLM 请求状态 */
 export type LLMStatus = 'idle' | 'loading' | 'done' | 'error'
 
+/** Token 用量 */
+export interface TokenUsage {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
 /** LLM 响应结果 */
 export interface ChatResult {
   response: string
   thinking?: string
   executedCommand?: string
   commandOutput?: string
+  usage?: TokenUsage
 }
