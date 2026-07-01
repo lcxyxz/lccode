@@ -44,6 +44,70 @@ interface ParsedAction {
 }
 
 /**
+ * 解析工具调用参数字符串
+ * 支持 key="value" 格式，value 中可包含转义序列
+ */
+function parseToolParams(paramsStr: string): Record<string, string> {
+  const params: Record<string, string> = {}
+  let i = 0
+
+  while (i < paramsStr.length) {
+    // 跳过空白和逗号
+    while (i < paramsStr.length && (paramsStr[i] === ' ' || paramsStr[i] === ',' || paramsStr[i] === '\n' || paramsStr[i] === '\r')) {
+      i++
+    }
+
+    if (i >= paramsStr.length) break
+
+    // 解析 key
+    const keyMatch = paramsStr.slice(i).match(/^(\w+)=/)
+    if (!keyMatch) break
+
+    const key = keyMatch[1]
+    i += keyMatch[0].length
+
+    // 检查是否是字符串值（以双引号开始）
+    if (paramsStr[i] !== '"') break
+
+    i++ // 跳过开始的双引号
+    let value = ''
+    let escaped = false
+
+    // 逐个字符解析值，处理转义序列
+    while (i < paramsStr.length) {
+      const char = paramsStr[i]
+
+      if (escaped) {
+        // 处理转义序列
+        switch (char) {
+          case '"': value += '"'; break
+          case '\\': value += '\\'; break
+          case 'n': value += '\n'; break
+          case 't': value += '\t'; break
+          case 'r': value += '\r'; break
+          default: value += `\\${char}`; break
+        }
+        escaped = false
+      } else if (char === '\\') {
+        escaped = true
+      } else if (char === '"') {
+        // 值结束
+        i++ // 跳过结束的双引号
+        break
+      } else {
+        value += char
+      }
+
+      i++
+    }
+
+    params[key] = value
+  }
+
+  return params
+}
+
+/**
  * 解析 LLM 响应，提取 Thought 和 Action
  */
 function parseLLMResponse(response: string): ParsedAction | null {
@@ -57,28 +121,14 @@ function parseLLMResponse(response: string): ParsedAction | null {
 
   const action = actionMatch[1].trim()
 
-  // 解析 ToolCall[tool_name](params)
-  const toolCallMatch = action.match(/ToolCall\[(\w+)\]\((.*)\)/)
+  // 解析 ToolCall[tool_name](params) - 匹配跨行内容
+  const toolCallMatch = action.match(/ToolCall\[(\w+)\]\(([\s\S]*)\)/)
   if (toolCallMatch) {
     const toolName = toolCallMatch[1]
     const paramsStr = toolCallMatch[2]
 
-    // 解析参数: key="value"（支持转义序列 \" \n \t \\ 等）
-    const params: Record<string, string> = {}
-    const paramRegex = /(\w+)="((?:[^"\\]|\\.)*)"/g
-    let match
-    while ((match = paramRegex.exec(paramsStr)) !== null) {
-      params[match[1]] = match[2].replace(/\\(.)/g, (_, char) => {
-        switch (char) {
-          case '"': return '"'
-          case '\\': return '\\'
-          case 'n': return '\n'
-          case 't': return '\t'
-          case 'r': return '\r'
-          default: return `\\${char}`
-        }
-      })
-    }
+    // 使用健壮的参数解析器
+    const params = parseToolParams(paramsStr)
 
     return { thought, type: 'tool_call', toolName, params }
   }
@@ -164,7 +214,9 @@ export class Agent {
   async *processInput(query: string): AsyncGenerator<AgentEvent> {
     writeFileSync(DEBUG_LOG, '')
     const maxRounds = 15
+    const maxParseRetries = 2  // 解析失败最大重试次数
     let round = 0
+    let parseRetries = 0  // 解析失败重试计数
     // 记录当前查询在 chatHistory 中的起始位置，隔离不同查询的上下文
     this.currentQueryStartIndex = this.chatHistory.length
     this.chatHistory.push({ role: 'user', content: query })
@@ -197,11 +249,34 @@ export class Agent {
       debugLog(`Parsed:`, JSON.stringify(parsed, null, 2))
 
       if (!parsed) {
-        // 解析失败，返回原始响应
+        parseRetries++
+
+        if (parseRetries <= maxParseRetries) {
+          // 解析失败，提示 LLM 使用正确格式并重试
+          const retryMsg = `[系统提示] 你的回复格式不正确，无法解析。请必须严格使用以下格式：
+Thought: <你的思考>
+Action: ToolCall[工具名](参数="值") 或 Finish[你的答案]
+
+即使你只是想直接回答问题，也必须使用：
+Thought: 我已完成任务，直接回答用户
+Action: Finish[你的答案]
+
+请重新回复，确保包含 "Thought:" 和 "Action:" 前缀。`
+
+          this.chatHistory.push({ role: 'assistant', content: llmResult.response })
+          this.chatHistory.push({ role: 'user', content: retryMsg })
+          debugLog(`Parse failed, retry ${parseRetries}/${maxParseRetries}`)
+          continue
+        }
+
+        // 超过重试次数，返回原始响应
         this.pushAssistant(llmResult.response)
         yield { type: 'response', content: llmResult.response }
         return
       }
+
+      // 解析成功，重置重试计数
+      parseRetries = 0
 
       // 输出 Thought
       if (parsed.thought) {
@@ -230,7 +305,12 @@ export class Agent {
         const result = await tool.execute(parsed.params || {})
         debugLog(`Tool result:`, JSON.stringify(result))
 
-        const commandStr = `${parsed.toolName}(${Object.entries(parsed.params || {}).map(([k, v]) => `${k}="${v}"`).join(', ')})`
+        // write_file/edit_file 时隐藏 content 内容
+        const hideContent = parsed.toolName === 'write_file' || parsed.toolName === 'edit_file'
+        const commandStr = `${parsed.toolName}(${Object.entries(parsed.params || {}).map(([k, v]) => {
+          const value = (hideContent && k === 'content') ? '...' : v
+          return `${k}="${value}"`
+        }).join(', ')})`
         yield {
           type: 'command',
           content: `$ ${commandStr}`,

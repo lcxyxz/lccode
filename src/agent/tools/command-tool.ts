@@ -6,12 +6,12 @@ import type { Tool, ToolResult } from './tool-registry.js'
  */
 export const executeCommandTool: Tool = {
   name: 'execute_command',
-  description: '执行一条只读的系统命令用于探索和查询，例如查看文件、搜索内容、检查系统状态。不能用于修改文件。每次只能执行一条简单命令，禁止使用 &&、||、;、| 等连接多条命令。',
+  description: '执行只读命令（仅查询，不能修改）。每次只执行一条简单命令，禁止 && || ; | 等连接',
   parameters: [
     {
       name: 'command',
       type: 'string',
-      description: '要执行的一条只读命令（禁止用 &&、||、;、| 连接多条命令），例如: ls -la, cat file.txt, git status',
+      description: '单条命令，如: ls -la, cat file.txt, git status',
       required: true,
     },
   ],

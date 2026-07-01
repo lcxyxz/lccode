@@ -51,6 +51,7 @@ export class DeepSeekProvider {
       {
         model: this.model,
         messages: fullMessages,
+        temperature: 0,
         stream: true,
         stream_options: { include_usage: true },
       } as OpenAI.ChatCompletionCreateParamsStreaming,
