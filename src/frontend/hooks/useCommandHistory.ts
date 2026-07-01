@@ -28,16 +28,5 @@ export function useCommandHistory() {
     return h[newIdx]
   }, [])
 
-  const navigateDown = useCallback((): string | null => {
-    const newIdx = historyIdxRef.current + 1
-    const h = historyRef.current
-    if (newIdx >= h.length) {
-      setHistoryIdx(-1)
-      return ''
-    }
-    setHistoryIdx(newIdx)
-    return h[newIdx]
-  }, [])
-
-  return { addHistory, navigateUp, navigateDown }
+  return { addHistory, navigateUp }
 }

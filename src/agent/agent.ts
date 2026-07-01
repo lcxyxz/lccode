@@ -5,10 +5,10 @@
 
 import { writeFileSync, appendFileSync } from 'node:fs'
 import { DeepSeekProvider, type ChatMessage } from '../services/llm.js'
-import { ToolRegistry } from './tool-registry.js'
+import { ToolRegistry } from './tools/tool-registry.js'
 import { executeCommandTool } from './tools/command-tool.js'
 import { readFileTool, writeFileTool, editFileTool, deleteFileTool, deleteDirectoryTool } from './tools/file-tools.js'
-import { buildSystemPrompt } from './prompt-template.js'
+import { buildSystemPrompt } from './prompts/prompt-template.js'
 import type { AgentConfig, AgentEvent } from '../types/index.js'
 
 const DEBUG_LOG = '/tmp/agent-debug.log'
@@ -96,10 +96,9 @@ export class Agent {
 
   /**
    * 构建消息列表
-   * @param isFirstRound 是否是第一轮（需要传入原始问题）
    */
-  private buildMessages(isFirstRound: boolean): ChatMessage[] {
-    // 当前查询的消息范围，用于构建 messages 数组（传给 LLM API）
+  private buildMessages(): ChatMessage[] {
+    // 当前查询的消息范围
     const currentMessages = this.chatHistory.slice(this.currentQueryStartIndex)
 
     // system prompt 中的对话历史包含所有历史记录，让 LLM 有完整上下文
@@ -113,9 +112,10 @@ export class Agent {
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
     ]
-    // 只在第一轮添加当前查询的用户问题，后续轮次依赖 chatHistory
-    if (isFirstRound && currentMessages.length > 0) {
-      messages.push(currentMessages[0])
+    // 将当前查询的所有消息（user、assistant、tool result）加入 messages 数组
+    // 这样 LLM 能看到完整的对话轮次，而不是只依赖 system prompt 中的历史文本
+    for (const msg of currentMessages) {
+      messages.push(msg)
     }
 
     return messages
@@ -140,8 +140,6 @@ export class Agent {
     writeFileSync(DEBUG_LOG, '')
     const maxRounds = 15
     let round = 0
-    let isFirstRound = true
-
     // 记录当前查询在 chatHistory 中的起始位置，隔离不同查询的上下文
     this.currentQueryStartIndex = this.chatHistory.length
     this.chatHistory.push({ role: 'user', content: query })
@@ -151,9 +149,8 @@ export class Agent {
       debugLog(`\n=== Round ${round} ===`)
 
       // 构建消息并调用 LLM
-      const messages = this.buildMessages(isFirstRound)
+      const messages = this.buildMessages()
       const llmResult = await this.provider.chat(messages)
-      isFirstRound = false
       debugLog(`LLM response:`, llmResult.response)
 
       // 输出思考过程（LLM 的原生 thinking）

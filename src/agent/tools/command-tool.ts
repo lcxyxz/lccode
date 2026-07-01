@@ -1,5 +1,5 @@
 import { executeCommand } from '../../services/command-executor.js'
-import type { Tool, ToolResult } from '../tool-registry.js'
+import type { Tool, ToolResult } from './tool-registry.js'
 
 /**
  * 执行命令工具（只读）

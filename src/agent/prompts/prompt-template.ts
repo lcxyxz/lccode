@@ -6,8 +6,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import type { ToolRegistry } from './tool-registry.js'
-import type { ChatMessage } from '../services/llm.js'
+import type { ToolRegistry } from '../tools/tool-registry.js'
+import type { ChatMessage } from '../../services/llm.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -21,7 +21,7 @@ export interface PromptContext {
  */
 export function loadReferenceManual(): string {
   try {
-    const manualPath = join(__dirname, './prompts/system.md')
+    const manualPath = join(__dirname, './system.md')
     return readFileSync(manualPath, 'utf-8').trim()
   } catch {
     return ''

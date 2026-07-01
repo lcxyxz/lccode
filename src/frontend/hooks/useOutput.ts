@@ -63,13 +63,6 @@ export function useOutput() {
     }
   }, [])
 
-  const trimSections = useCallback((maxSections: number) => {
-    setSections(prev => {
-      if (prev.length <= maxSections) return prev
-      return prev.slice(-maxSections)
-    })
-  }, [])
-
   return {
     sections,
     addMessage,
@@ -77,6 +70,5 @@ export function useOutput() {
     addResponse,
     clearSections,
     resetCommandList,
-    trimSections,
   }
 }

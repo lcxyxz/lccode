@@ -10,7 +10,7 @@ import type { LLMStatus, TokenUsage } from '../types/index.js'
 export function useTerminal(onExit?: () => void) {
   const {
     sections, addMessage, addCommandResult, addResponse,
-    clearSections, resetCommandList, trimSections,
+    clearSections, resetCommandList,
   } = useOutput()
   const { addHistory, navigateUp } = useCommandHistory()
   const slash = useSlashCommands('')
@@ -41,7 +41,6 @@ export function useTerminal(onExit?: () => void) {
     addHistory,
     clearSections,
     resetCommandList,
-    trimSections,
   })
 
   actionsRef.current = {
@@ -51,7 +50,6 @@ export function useTerminal(onExit?: () => void) {
     addHistory,
     clearSections,
     resetCommandList,
-    trimSections,
   }
 
   const slashRef = useRef(slash)

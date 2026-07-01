@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, statSync, rmSync } from 'node:fs'
 import { dirname } from 'node:path'
-import type { Tool, ToolResult } from '../tool-registry.js'
+import type { Tool, ToolResult } from './tool-registry.js'
 
 /**
  * 读取文件内容
