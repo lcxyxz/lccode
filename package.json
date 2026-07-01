@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cli-highlight": "^2.1.11",
     "ink": "^7.1.0",
     "ink-text-input": "^6.0.0",
     "marked": "9.0.3",

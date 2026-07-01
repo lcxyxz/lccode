@@ -1,5 +1,5 @@
 export interface AgentEvent {
-  type: 'thinking' | 'command' | 'response' | 'error' | 'token_usage'
+  type: 'thinking' | 'command' | 'response' | 'error' | 'token_usage' | 'code_preview'
   content: string
   metadata?: {
     command?: string
@@ -10,6 +10,11 @@ export interface AgentEvent {
     promptTokens: number
     completionTokens: number
     totalTokens: number
+  }
+  codePreview?: {
+    filePath: string
+    language: string
+    content: string
   }
 }
 

@@ -9,7 +9,7 @@ import type { LLMStatus, TokenUsage } from '../types/index.js'
 
 export function useTerminal(onExit?: () => void) {
   const {
-    sections, addMessage, addCommandResult, addResponse,
+    sections, addMessage, addCommandResult, addResponse, addCodePreview,
     clearSections, resetCommandList,
   } = useOutput()
   const { addHistory, navigateUp } = useCommandHistory()
@@ -38,6 +38,7 @@ export function useTerminal(onExit?: () => void) {
     addMessage,
     addCommandResult,
     addResponse,
+    addCodePreview,
     addHistory,
     clearSections,
     resetCommandList,
@@ -47,6 +48,7 @@ export function useTerminal(onExit?: () => void) {
     addMessage,
     addCommandResult,
     addResponse,
+    addCodePreview,
     addHistory,
     clearSections,
     resetCommandList,
@@ -104,6 +106,15 @@ export function useTerminal(onExit?: () => void) {
                 completionTokens: prev.completionTokens + event.usage!.completionTokens,
                 totalTokens: prev.totalTokens + event.usage!.totalTokens,
               }))
+            }
+            break
+          case 'code_preview':
+            if (event.codePreview) {
+              actionsRef.current.addCodePreview(
+                event.codePreview.filePath,
+                event.codePreview.language,
+                event.codePreview.content,
+              )
             }
             break
         }

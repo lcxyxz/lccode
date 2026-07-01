@@ -1,5 +1,5 @@
 /** 输出区块类型 */
-export type SectionType = 'message' | 'command' | 'thinking' | 'response'
+export type SectionType = 'message' | 'command' | 'thinking' | 'response' | 'code_preview'
 
 /** 输出区块 */
 export interface OutputSection {
@@ -9,6 +9,11 @@ export interface OutputSection {
   content: string
   collapsed: boolean
   color?: 'green' | 'blue' | 'yellow' | 'cyan' | 'magenta' | 'white' | 'gray' | 'red'
+  codePreview?: {
+    filePath: string
+    language: string
+    content: string
+  }
 }
 
 /** 命令处理后的动作指令 */

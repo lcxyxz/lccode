@@ -3,7 +3,7 @@
  * 实现 ReAct（Reasoning + Acting）模式
  */
 
-import { writeFileSync, appendFileSync } from 'node:fs'
+import { writeFileSync, appendFileSync, readFileSync } from 'node:fs'
 import { DeepSeekProvider, type ChatMessage } from '../services/llm.js'
 import { ToolRegistry } from './tools/tool-registry.js'
 import { executeCommandTool } from './tools/command-tool.js'
@@ -15,6 +15,22 @@ const DEBUG_LOG = '/tmp/agent-debug.log'
 
 function debugLog(...lines: string[]) {
   appendFileSync(DEBUG_LOG, lines.join('\n') + '\n')
+}
+
+const EXTENSION_LANGUAGE: Record<string, string> = {
+  '.ts': 'typescript', '.tsx': 'typescript', '.js': 'javascript', '.jsx': 'javascript',
+  '.py': 'python', '.rb': 'ruby', '.go': 'go', '.rs': 'rust', '.java': 'java',
+  '.c': 'c', '.cpp': 'cpp', '.h': 'c', '.hpp': 'cpp',
+  '.css': 'css', '.scss': 'scss', '.less': 'less',
+  '.html': 'html', '.htm': 'html', '.xml': 'xml',
+  '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml',
+  '.md': 'markdown', '.sql': 'sql', '.sh': 'bash', '.bash': 'bash',
+  '.vue': 'html', '.svelte': 'html',
+}
+
+function detectLanguage(filePath: string): string {
+  const ext = '.' + filePath.split('.').pop()?.toLowerCase()
+  return EXTENSION_LANGUAGE[ext] || 'text'
 }
 
 // ===================== 响应解析 =====================
@@ -47,12 +63,21 @@ function parseLLMResponse(response: string): ParsedAction | null {
     const toolName = toolCallMatch[1]
     const paramsStr = toolCallMatch[2]
 
-    // 解析参数: key="value"
+    // 解析参数: key="value"（支持转义序列 \" \n \t \\ 等）
     const params: Record<string, string> = {}
-    const paramRegex = /(\w+)="([^"]*)"/g
+    const paramRegex = /(\w+)="((?:[^"\\]|\\.)*)"/g
     let match
     while ((match = paramRegex.exec(paramsStr)) !== null) {
-      params[match[1]] = match[2]
+      params[match[1]] = match[2].replace(/\\(.)/g, (_, char) => {
+        switch (char) {
+          case '"': return '"'
+          case '\\': return '\\'
+          case 'n': return '\n'
+          case 't': return '\t'
+          case 'r': return '\r'
+          default: return `\\${char}`
+        }
+      })
     }
 
     return { thought, type: 'tool_call', toolName, params }
@@ -214,6 +239,25 @@ export class Agent {
             commandOutput: result.output,
             success: result.success,
           },
+        }
+
+        // write_file / edit_file 成功后，展示代码预览
+        if (result.success && (parsed.toolName === 'write_file' || parsed.toolName === 'edit_file')) {
+          const filePath = parsed.params?.file_path
+          if (filePath) {
+            try {
+              const fileContent = readFileSync(filePath, 'utf-8')
+              yield {
+                type: 'code_preview',
+                content: '',
+                codePreview: {
+                  filePath,
+                  language: detectLanguage(filePath),
+                  content: fileContent,
+                },
+              }
+            } catch {}
+          }
         }
 
         const resultMsg = result.success

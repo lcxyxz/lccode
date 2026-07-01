@@ -63,11 +63,21 @@ export function useOutput() {
     }
   }, [])
 
+  const addCodePreview = useCallback((filePath: string, language: string, content: string) => {
+    const id = idCounterRef.current++
+    setSections(prev => [...prev, {
+      id, type: 'code_preview', title: filePath,
+      content, collapsed: false, color: 'white',
+      codePreview: { filePath, language, content },
+    }])
+  }, [])
+
   return {
     sections,
     addMessage,
     addCommandResult,
     addResponse,
+    addCodePreview,
     clearSections,
     resetCommandList,
   }
