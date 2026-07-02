@@ -6,6 +6,7 @@ import { useSlashCommands } from './hooks/useSlashCommands.js'
 import { processCommand } from './commands.js'
 import { Agent } from '../agent/agent.js'
 import type { LLMStatus, TokenUsage } from '../types/index.js'
+import { LogLevel } from '../utils/logger.js'
 
 export function useTerminal(onExit?: () => void) {
   const {
@@ -24,13 +25,17 @@ export function useTerminal(onExit?: () => void) {
   inputRef.current = input
 
   useEffect(() => {
-    const apiKey = process.env.DEEPSEEK_API_KEY
+    const apiKey = process.env.LCCODE_API_KEY
     if (apiKey) {
-      agentRef.current = new Agent({
-        apiKey,
-        baseUrl: process.env.DEEPSEEK_BASE_URL,
-        model: process.env.DEEPSEEK_MODEL,
-      })
+      agentRef.current = new Agent(
+        {
+          apiKey,
+          baseUrl: process.env.LCCODE_BASE_URL,
+          model: process.env.LCCODE_MODEL,
+          provider: process.env.LCCODE_PROVIDER as any,
+        },
+        { level: LogLevel.DEBUG }
+      )
     }
   }, [])
 
@@ -72,7 +77,7 @@ export function useTerminal(onExit?: () => void) {
   const callAgent = useCallback(async (query: string) => {
     const agent = agentRef.current
     if (!agent) {
-      actionsRef.current.addMessage('Error: DEEPSEEK_API_KEY not set.', 'yellow')
+      actionsRef.current.addMessage('Error: LCCODE_API_KEY not set.', 'yellow')
       return
     }
 

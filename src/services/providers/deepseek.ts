@@ -1,23 +1,12 @@
 /**
- * LLM 服务模块
- * 支持多种模型接口，当前实现 DeepSeek（兼容 OpenAI 格式）
+ * DeepSeek Provider
+ * DeepSeek API (compatible with OpenAI format)
  */
 
 import OpenAI from 'openai'
 import type { ChatCompletionChunk } from 'openai/resources/chat/completions'
-import type { ChatResult, TokenUsage } from '../types/index.js'
-
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-  reasoning_content?: string
-}
-
-export interface DeepSeekConfig {
-  apiKey: string
-  baseUrl?: string
-  model?: string
-}
+import type { ChatResult, TokenUsage } from '../../types/shared.js'
+import type { LLMProvider, ProviderConfig } from '../types.js'
 
 interface DeepSeekDelta extends ChatCompletionChunk.Choice.Delta {
   reasoning_content?: string
@@ -27,12 +16,12 @@ interface DeepSeekChunk extends ChatCompletionChunk {
   choices: Array<ChatCompletionChunk.Choice & { delta: DeepSeekDelta }>
 }
 
-export class DeepSeekProvider {
+export class DeepSeekProvider implements LLMProvider {
   readonly name = 'deepseek'
   private client: OpenAI
   private model: string
 
-  constructor(config: DeepSeekConfig) {
+  constructor(config: ProviderConfig) {
     this.client = new OpenAI({
       apiKey: config.apiKey,
       baseURL: config.baseUrl || 'https://api.deepseek.com',
@@ -40,11 +29,10 @@ export class DeepSeekProvider {
     this.model = config.model || 'deepseek-v4-pro'
   }
 
-  async chat(messages: ChatMessage[], options?: { signal?: AbortSignal }): Promise<ChatResult> {
+  async chat(messages: { role: 'system' | 'user' | 'assistant'; content: string }[], options?: { signal?: AbortSignal }): Promise<ChatResult> {
     const fullMessages: OpenAI.ChatCompletionMessageParam[] = messages.map(m => ({
-      role: m.role as 'system' | 'user' | 'assistant',
+      role: m.role,
       content: m.content,
-      ...(m.reasoning_content && { reasoning_content: m.reasoning_content }),
     }))
 
     const stream = await this.client.chat.completions.create(

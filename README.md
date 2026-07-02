@@ -1,10 +1,10 @@
 # lccode
 
-一个基于 Ink 构建的极简终端 AI 编程助手，集成 DeepSeek API，支持命令执行和对话交互。
+一个基于 Ink 构建的极简终端 AI 编程助手，支持 DeepSeek 和 Mimo 两家 AI 服务提供商。
 
 ## 功能特性
 
-- AI 对话：与 DeepSeek 模型进行自然语言交互
+- AI 对话：支持 DeepSeek 和 Mimo 两家服务商
 - 命令执行：AI 可以生成并执行终端命令
 - 实时反馈：命令执行结果实时显示
 - 思考过程：显示 AI 的思考过程（可选）
@@ -46,22 +46,49 @@ npm install
 ```bash
 cat > ~/.lccode.json << 'EOF'
 {
+  "provider": "deepseek",
   "apiKey": "your-api-key",
-  "baseUrl": "https://api.deepseek.com",
   "model": "deepseek-v4-flash"
 }
 EOF
 ```
 
-配置项说明：
+#### 支持的 AI 服务提供商
+
+| Provider | 说明 | 默认模型 |
+|----------|------|----------|
+| `deepseek` | DeepSeek API（默认） | `deepseek-v4-pro` |
+| `mimo` | Mimo API | `mimo-v2.5-pro` |
+
+#### 配置示例
+
+**DeepSeek（默认）**
+```json
+{
+  "provider": "deepseek",
+  "apiKey": "sk-your-deepseek-key",
+  "model": "deepseek-v4-flash"
+}
+```
+
+**Mimo**
+```json
+{
+  "provider": "mimo",
+  "apiKey": "your-mimo-api-key",
+  "model": "mimo-v2.5-pro"
+}
+```
+
+#### 配置项说明
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
-| `apiKey` | 是 | DeepSeek API 密钥 |
-| `baseUrl` | 否 | API 地址，默认 `https://api.deepseek.com` |
-| `model` | 否 | 模型名称，默认 `deepseek-v4-flash` |
+| `provider` | 否 | AI 服务提供商，默认 `deepseek` |
+| `apiKey` | 是 | API 密钥 |
+| `baseUrl` | 否 | 自定义 API 地址（可选） |
+| `model` | 否 | 模型名称（可选，使用提供商默认值） |
 
-> 如果 `~/.lccode.json` 不存在，程序会回退读取项目目录下的 `.env` 文件。
 
 ### 全局安装（推荐）
 
@@ -108,6 +135,11 @@ lccode/
 │   ├── agent/           # AI 核心逻辑
 │   ├── frontend/        # Ink 组件
 │   ├── services/        # API 服务
+│   │   ├── providers/   # AI 服务提供商实现
+│   │   │   ├── deepseek.ts
+│   │   │   └── mimo.ts
+│   │   ├── index.ts     # 提供商工厂
+│   │   └── types.ts     # 提供商接口
 │   ├── types/           # TypeScript 类型
 │   ├── config.ts        # 配置加载（读取 ~/.lccode.json）
 │   ├── app.tsx          # 主应用组件
@@ -116,11 +148,21 @@ lccode/
 └── dist/                # 构建输出
 ```
 
+## 任务清单
+
+- [x] **多厂商模型支持**：接入 DeepSeek 和 Mimo 两家人工智能服务商，灵活切换模型
+- [ ] **MCP 协议集成**：支持 Model Context Protocol，扩展 AI 与外部工具的互联能力
+- [ ] **Skill 技能系统**：支持自定义技能/工具，让 AI 调用更丰富的本地能力（如文件搜索、代码分析等）
+- [ ] **会话历史管理**：支持保存和加载历史对话，方便回溯
+- [ ] **配置热重载**：修改配置文件后无需重启即可生效
+- [ ] **插件机制**：开放插件 API，允许第三方扩展功能
+- [ ] **多语言支持**：优化中英文交互体验
+
 ## 技术栈
 
 - **运行时**: Node.js + TypeScript
 - **UI 框架**: Ink (React for CLI)
-- **AI 服务**: DeepSeek API
+- **AI 服务**: DeepSeek、Mimo
 - **构建工具**: TypeScript + tsx
 - **测试**: Vitest
 

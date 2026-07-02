@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { ChatMessage } from '../src/services/llm.js'
+import type { ChatMessage } from '../src/services/types.js'
 
 const mockCreate = vi.fn()
 
@@ -20,8 +20,8 @@ describe('DeepSeekProvider', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    const mod = await import('../src/services/llm.js')
-    provider = new mod.DeepSeekProvider({
+    const { DeepSeekProvider } = await import('../src/services/providers/deepseek.js')
+    provider = new DeepSeekProvider({
       apiKey: 'test-key',
       model: 'test-model',
     })
@@ -97,5 +97,41 @@ describe('DeepSeekProvider', () => {
     const callArgs = mockCreate.mock.calls[0][0]
     expect(callArgs.messages[0].role).toBe('system')
     expect(callArgs.messages[0].content).toBe('You are a helper')
+  })
+})
+
+describe('createProvider', () => {
+  it('应该创建 DeepSeek provider', async () => {
+    const { createProvider } = await import('../src/services/index.js')
+    const provider = createProvider({
+      apiKey: 'test-key',
+      provider: 'deepseek',
+    })
+    expect(provider.name).toBe('deepseek')
+  })
+
+  it('应该创建 Mimo provider', async () => {
+    const { createProvider } = await import('../src/services/index.js')
+    const provider = createProvider({
+      apiKey: 'test-key',
+      provider: 'mimo',
+    })
+    expect(provider.name).toBe('mimo')
+  })
+
+  it('应该默认创建 DeepSeek provider', async () => {
+    const { createProvider } = await import('../src/services/index.js')
+    const provider = createProvider({
+      apiKey: 'test-key',
+    })
+    expect(provider.name).toBe('deepseek')
+  })
+
+  it('应该对未知 provider 抛出错误', async () => {
+    const { createProvider } = await import('../src/services/index.js')
+    expect(() => createProvider({
+      apiKey: 'test-key',
+      provider: 'unknown' as any,
+    })).toThrow('Unknown provider: unknown')
   })
 })

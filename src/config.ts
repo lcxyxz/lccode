@@ -2,10 +2,13 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 
+export type ProviderType = 'deepseek' | 'mimo'
+
 export interface LccodeConfig {
   apiKey: string
   baseUrl?: string
   model?: string
+  provider?: ProviderType
 }
 
 const CONFIG_FILE = '.lccode.json'
@@ -20,6 +23,7 @@ export function loadConfig(): LccodeConfig | null {
       apiKey: data.apiKey,
       baseUrl: data.baseUrl,
       model: data.model,
+      provider: data.provider,
     }
   } catch {
     return null

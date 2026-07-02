@@ -1,6 +1,6 @@
 {
   "name": "ink-terminal-assistant",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "Mini terminal programming assistant built with Ink",
   "bin": {
     "lccode": "./dist/cli.js"

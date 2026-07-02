@@ -18,8 +18,11 @@ export interface AgentEvent {
   }
 }
 
+export type ProviderType = 'deepseek' | 'mimo'
+
 export interface AgentConfig {
   apiKey: string
   baseUrl?: string
   model?: string
+  provider?: ProviderType
 }

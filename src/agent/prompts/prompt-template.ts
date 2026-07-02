@@ -3,30 +3,14 @@
  * 动态生成系统提示词，注入工具列表、对话历史和用户问题
  */
 
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
 import type { ToolRegistry } from '../tools/tool-registry.js'
-import type { ChatMessage } from '../../services/llm.js'
+import type { ChatMessage } from '../../services/types.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 
 export interface PromptContext {
   history: ChatMessage[]
 }
 
-/**
- * 加载参考手册（可选，注入到提示词中帮助 LLM 理解格式）
- */
-export function loadReferenceManual(): string {
-  try {
-    const manualPath = join(__dirname, './system.md')
-    return readFileSync(manualPath, 'utf-8').trim()
-  } catch {
-    return ''
-  }
-}
 
 /**
  * 格式化对话历史
@@ -67,7 +51,6 @@ export function buildSystemPrompt(
 ): string {
   const toolDescriptions = registry.formatToolDescriptions()
   const history = formatHistory(ctx.history)
-  const referenceManual = loadReferenceManual() // 后期有用再加上
   const needsCommandLimit = needsCommandRestrictions(ctx.history)
 
   const commandLimit = needsCommandLimit ? `
@@ -82,37 +65,108 @@ ${toolDescriptions}${commandLimit}
 
 ## 输出格式（必须严格遵守）
 
-每次回应必须包含两部分：
+每次回应必须且只能输出一个 JSON 对象，使用 <lccode_json> 标签包裹：
 
-Thought: <你的思考>
-Action: <行动>
+<lccode_json>
+{
+  "type": "<类型>",
+  ...其他字段
+}
+</lccode_json>
 
-**Action 只能是以下两种之一：**
+### 支持的类型
 
-1. 调用工具：ToolCall[工具名](参数="值")
-2. 结束任务：Finish[最终答案]
+#### 1. 工具调用 (tool_call)
+调用工具时使用：
 
-## 示例
+<lccode_json>
+{
+  "type": "tool_call",
+  "thought": "你的思考过程",
+  "tool": "工具名",
+  "params": {
+    "参数名": "参数值"
+  }
+}
+</lccode_json>
 
-Thought: 用户想查看文件，执行 ls 命令
-Action: ToolCall[execute_command](command="ls -la")
+**示例：**
+<lccode_json>
+{
+  "type": "tool_call",
+  "thought": "用户想查看当前目录的文件，我需要执行 ls 命令",
+  "tool": "execute_command",
+  "params": {
+    "command": "ls -la"
+  }
+}
+</lccode_json>
 
-Thought: 已获取结果，直接回答
-Action: Finish[当前目录包含：src/, package.json]
+#### 2. 最终答案 (final_answer)
+任务完成，返回最终答案时使用：
 
-Thought: 文件创建成功，告诉用户
-Action: Finish[文件已创建成功！]
+<lccode_json>
+{
+  "type": "final_answer",
+  "thought": "你的思考过程",
+  "answer": "最终答案内容"
+}
+</lccode_json>
 
-## 规则
+**示例：**
+<lccode_json>
+{
+  "type": "final_answer",
+  "thought": "已经获取到文件列表，可以直接回答用户",
+  "answer": "当前目录包含：src/, package.json, README.md 等文件"
+}
+</lccode_json>
 
-1. 每次回应必须有 Thought: 和 Action:
-2. 每次只能调用一个工具
-3. 工具执行成功后，如果能回答用户就用 Finish[...] 结束
-4. 不要重复执行相同命令
-5. 使用中文回答
+#### 3. 需要澄清 (need_clarification)
+当用户意图不明确，需要进一步确认时使用：
+
+<lccode_json>
+{
+  "type": "need_clarification",
+  "thought": "用户的请求比较模糊，需要确认具体需求",
+  "question": "请确认你需要哪种操作？",
+  "options": ["选项1", "选项2"]
+}
+</lccode_json>
+
+## 文件写入示例
+
+<lccode_json>
+{
+  "type": "tool_call",
+  "thought": "用户需要创建 Python 文件",
+  "tool": "write_file",
+  "params": {
+    "file_path": "example.py",
+    "content": "#!/usr/bin/env python3\\nprint('Hello World')"
+  }
+}
+</lccode_json>
+
+**注意：**
+- content 字段中的换行符使用 \\n 表示
+- 双引号使用 \\" 转义
+- 反斜杠使用 \\\\ 转义
+
+## 重要规则
+
+1. 每次回应**必须且只能**输出一个 JSON 对象
+2. 必须使用 <lccode_json>...</lccode_json> 标签包裹
+3. \`type\` 字段是必填的，决定了 JSON 的结构
+4. **\`thought\` 字段是必填的**，必须记录你的思考过程，不能为空
+5. 对于文件写入，content 字段必须包含完整文件内容
+6. 确保 JSON 格式正确，避免语法错误
+7. 不要重复执行相同命令
+8. 使用中文回答
+
 ## 对话历史
 
 ${history}
 
-根据对话历史中的最新消息，判断当前状态并决定下一步行动。`
+根据对话历史中的最新消息，判断当前状态并决定下一步行动，输出对应的 JSON。`
 }

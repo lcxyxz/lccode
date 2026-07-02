@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockChat = vi.fn()
 
-vi.mock('../src/services/llm.js', () => ({
-  DeepSeekProvider: vi.fn().mockImplementation(function () {
-    return { chat: mockChat }
+vi.mock('../src/services/index.js', () => ({
+  createProvider: vi.fn().mockImplementation(function () {
+    return { chat: mockChat, name: 'deepseek' }
   }),
 }))
 
@@ -27,9 +27,9 @@ describe('Agent', () => {
     agent = new Agent({ apiKey: 'test-key' })
   })
 
-  it('应该处理直接 Finish 的响应', async () => {
+  it('应该处理最终答案的响应', async () => {
     mockChat.mockResolvedValue({
-      response: 'Thought: 用户只是打招呼，不需要执行命令\nAction: Finish[你好！有什么可以帮你的？]',
+      response: '<lccode_json>\n{\n  "type": "final_answer",\n  "thought": "用户只是打招呼",\n  "answer": "你好！有什么可以帮你的？"\n}\n</lccode_json>',
     })
 
     const events: any[] = []
@@ -43,7 +43,7 @@ describe('Agent', () => {
 
   it('应该注入系统提示词到消息中', async () => {
     mockChat.mockResolvedValue({
-      response: 'Thought: 测试\nAction: Finish[OK]',
+      response: '<lccode_json>\n{\n  "type": "final_answer",\n  "thought": "测试",\n  "answer": "OK"\n}\n</lccode_json>',
     })
 
     for await (const _ of agent.processInput('test')) {
@@ -52,12 +52,12 @@ describe('Agent', () => {
     const callArgs = mockChat.mock.calls[0][0]
     expect(callArgs[0].role).toBe('system')
     expect(callArgs[0].content).toContain('可用工具')
-    expect(callArgs[0].content).toContain('ToolCall[')
+    expect(callArgs[0].content).toContain('lccode_json')
   })
 
   it('应该支持思考内容输出', async () => {
     mockChat.mockResolvedValue({
-      response: 'Thought: 这是思考过程\nAction: Finish[最终答案]',
+      response: '<lccode_json>\n{\n  "type": "final_answer",\n  "thought": "这是思考过程",\n  "answer": "最终答案"\n}\n</lccode_json>',
       thinking: 'LLM 原生思考...',
     })
 
@@ -75,11 +75,11 @@ describe('Agent', () => {
     // 第一次返回工具调用
     mockChat
       .mockResolvedValueOnce({
-        response: 'Thought: 用户想查看文件，执行 ls 命令\nAction: ToolCall[execute_command](command="ls")',
+        response: '<lccode_json>\n{\n  "type": "tool_call",\n  "thought": "用户想查看文件",\n  "tool": "execute_command",\n  "params": {\n    "command": "ls"\n  }\n}\n</lccode_json>',
       })
-      // 第二次返回 Finish
+      // 第二次返回最终答案
       .mockResolvedValueOnce({
-        response: 'Thought: 已获得文件列表\nAction: Finish[文件列表：file1.txt, file2.txt]',
+        response: '<lccode_json>\n{\n  "type": "final_answer",\n  "thought": "已获得文件列表",\n  "answer": "文件列表：file1.txt, file2.txt"\n}\n</lccode_json>',
       })
 
     const events: any[] = []
@@ -102,11 +102,11 @@ describe('Agent', () => {
     // 第一次返回不存在的工具
     mockChat
       .mockResolvedValueOnce({
-        response: 'Thought: 测试不存在的工具\nAction: ToolCall[nonexistent](param="value")',
+        response: '<lccode_json>\n{\n  "type": "tool_call",\n  "thought": "测试不存在的工具",\n  "tool": "nonexistent",\n  "params": {\n    "param": "value"\n  }\n}\n</lccode_json>',
       })
-      // 第二次返回 Finish
+      // 第二次返回最终答案
       .mockResolvedValueOnce({
-        response: 'Thought: 工具不存在\nAction: Finish[工具不存在]',
+        response: '<lccode_json>\n{\n  "type": "final_answer",\n  "thought": "工具不存在",\n  "answer": "工具不存在"\n}\n</lccode_json>',
       })
 
     const events: any[] = []
@@ -117,6 +117,82 @@ describe('Agent', () => {
     // 不应该有命令执行事件
     const commandEvents = events.filter(e => e.type === 'command')
     expect(commandEvents.length).toBe(0)
+  })
+
+  it('应该支持文件写入的工具调用', async () => {
+    // 第一次返回文件写入的工具调用
+    mockChat
+      .mockResolvedValueOnce({
+        response: '<lccode_json>\n{\n  "type": "tool_call",\n  "thought": "用户需要创建文件",\n  "tool": "write_file",\n  "params": {\n    "file_path": "test.txt",\n    "content": "Hello World"\n  }\n}\n</lccode_json>',
+      })
+      // 第二次返回最终答案
+      .mockResolvedValueOnce({
+        response: '<lccode_json>\n{\n  "type": "final_answer",\n  "thought": "文件创建成功",\n  "answer": "文件已创建"\n}\n</lccode_json>',
+      })
+
+    const events: any[] = []
+    for await (const event of agent.processInput('创建文件')) {
+      events.push(event)
+    }
+
+    // 应该有命令执行事件
+    const commandEvents = events.filter(e => e.type === 'command')
+    expect(commandEvents.length).toBe(1)
+    expect(commandEvents[0].metadata?.success).toBe(true)
+  })
+
+  it('应该支持需要澄清的响应', async () => {
+    mockChat.mockResolvedValue({
+      response: '<lccode_json>\n{\n  "type": "need_clarification",\n  "thought": "用户请求比较模糊",\n  "question": "请确认你需要哪种操作？",\n  "options": ["查看文件", "执行命令"]\n}\n</lccode_json>',
+    })
+
+    const events: any[] = []
+    for await (const event of agent.processInput('帮我处理一下')) {
+      events.push(event)
+    }
+
+    // 应该有最终响应，包含澄清问题
+    const responseEvents = events.filter(e => e.type === 'response')
+    expect(responseEvents.length).toBe(1)
+    expect(responseEvents[0].content).toContain('请确认')
+  })
+
+  it('应该支持错误响应', async () => {
+    mockChat.mockResolvedValue({
+      response: '<lccode_json>\n{\n  "type": "error",\n  "thought": "发生了错误",\n  "error": "文件不存在"\n}\n</lccode_json>',
+    })
+
+    const events: any[] = []
+    for await (const event of agent.processInput('测试错误')) {
+      events.push(event)
+    }
+
+    // 应该有最终响应，包含错误信息
+    const responseEvents = events.filter(e => e.type === 'response')
+    expect(responseEvents.length).toBe(1)
+    expect(responseEvents[0].content).toContain('错误')
+  })
+
+  it('应该拒绝没有 thought 字段的响应', async () => {
+    // 第一次返回没有 thought 字段的响应
+    mockChat
+      .mockResolvedValueOnce({
+        response: '<lccode_json>\n{\n  "type": "final_answer",\n  "answer": "缺少thought"\n}\n</lccode_json>',
+      })
+      // 第二次返回正确的响应
+      .mockResolvedValueOnce({
+        response: '<lccode_json>\n{\n  "type": "final_answer",\n  "thought": "修正后",\n  "answer": "正确答案"\n}\n</lccode_json>',
+      })
+
+    const events: any[] = []
+    for await (const event of agent.processInput('测试thought')) {
+      events.push(event)
+    }
+
+    // 应该有重试提示
+    const responseEvents = events.filter(e => e.type === 'response')
+    expect(responseEvents.length).toBe(1)
+    expect(responseEvents[0].content).toContain('正确答案')
   })
 
   it('清空历史后应该重新开始', () => {

@@ -3,9 +3,10 @@ import { loadConfig } from './config.js'
 
 const config = loadConfig()
 if (config) {
-  process.env.DEEPSEEK_API_KEY = config.apiKey
-  if (config.baseUrl) process.env.DEEPSEEK_BASE_URL = config.baseUrl
-  if (config.model) process.env.DEEPSEEK_MODEL = config.model
+  process.env.LCCODE_API_KEY = config.apiKey
+  if (config.baseUrl) process.env.LCCODE_BASE_URL = config.baseUrl
+  if (config.model) process.env.LCCODE_MODEL = config.model
+  if (config.provider) process.env.LCCODE_PROVIDER = config.provider
 } else {
   throw new Error("请先配置模型！！！")
 }

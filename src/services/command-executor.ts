@@ -14,6 +14,7 @@ const SAFE_COMMANDS = [
   'ps', 'df', 'du', 'free', 'uname', 'whoami', 'date', 'cal',
   'git', 'git log', 'git diff', 'git status', 'git show',
   'which', 'file', 'stat', 'tree',
+  'npm', 'npx', 'yarn', 'pnpm',
 ]
 
 /** 危险命令黑名单 */

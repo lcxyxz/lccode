@@ -54,7 +54,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
         onSubmit={handleSubmit}
         llmStatus={llmStatus}
       />
-      <StatusLine llmStatus={llmStatus} modelName={process.env.DEEPSEEK_MODEL || 'AI'} tokenUsage={tokenUsage} />
+      <StatusLine llmStatus={llmStatus} modelName={process.env.LCCODE_MODEL || 'AI'} tokenUsage={tokenUsage} />
     </Box>
   )
 }
