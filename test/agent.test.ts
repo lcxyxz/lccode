@@ -18,13 +18,22 @@ vi.mock('../src/services/command-executor.js', () => ({
   isCommandSafe: vi.fn().mockReturnValue({ safe: true }),
 }))
 
+vi.mock('../src/agent/mcp/manager.js', () => {
+  return {
+    McpManager: class MockMcpManager {
+      loadFromConfig = vi.fn().mockResolvedValue([])
+      disconnectAll = vi.fn().mockResolvedValue(undefined)
+    }
+  }
+})
+
 describe('Agent', () => {
   let agent: any
 
   beforeEach(async () => {
     vi.clearAllMocks()
     const { Agent } = await import('../src/agent/agent.js')
-    agent = new Agent({ apiKey: 'test-key' })
+    agent = await Agent.create({ apiKey: 'test-key' })
   })
 
   it('应该处理最终答案的响应', async () => {

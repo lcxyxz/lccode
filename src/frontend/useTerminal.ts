@@ -27,7 +27,7 @@ export function useTerminal(onExit?: () => void) {
   useEffect(() => {
     const apiKey = process.env.LCCODE_API_KEY
     if (apiKey) {
-      agentRef.current = new Agent(
+      Agent.create(
         {
           apiKey,
           baseUrl: process.env.LCCODE_BASE_URL,
@@ -35,7 +35,9 @@ export function useTerminal(onExit?: () => void) {
           provider: process.env.LCCODE_PROVIDER as any,
         },
         { level: LogLevel.DEBUG }
-      )
+      ).then(agent => {
+        agentRef.current = agent
+      })
     }
   }, [])
 

@@ -1,3 +1,7 @@
+import type { ProviderType } from './shared.js'
+
+export type { ProviderType }
+
 export interface AgentEvent {
   type: 'thinking' | 'command' | 'response' | 'error' | 'token_usage' | 'code_preview'
   content: string
@@ -17,8 +21,6 @@ export interface AgentEvent {
     content: string
   }
 }
-
-export type ProviderType = 'deepseek' | 'mimo'
 
 export interface AgentConfig {
   apiKey: string

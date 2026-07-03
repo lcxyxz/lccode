@@ -1,8 +1,9 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
+import type { ProviderType } from './types/shared.js'
 
-export type ProviderType = 'deepseek' | 'mimo'
+export type { ProviderType }
 
 export interface LccodeConfig {
   apiKey: string

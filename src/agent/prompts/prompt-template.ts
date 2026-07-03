@@ -42,26 +42,30 @@ function needsCommandRestrictions(history: ChatMessage[]): boolean {
   )
 }
 
+// ===================== 静态部分缓存 =====================
+
+let staticPromptPrefix: string | null = null
+let staticPromptSuffix: string | null = null
+let cachedRegistryVersion = -1
+
 /**
- * 构建系统提示词
+ * 构建静态提示词前缀（工具描述 + 输出格式）
+ * 只在工具注册表变化时重新构建
  */
-export function buildSystemPrompt(
-  registry: ToolRegistry,
-  ctx: PromptContext,
-): string {
-  const toolDescriptions = registry.formatToolDescriptions()
-  const history = formatHistory(ctx.history)
-  const needsCommandLimit = needsCommandRestrictions(ctx.history)
+function buildStaticPrefix(registry: ToolRegistry): string {
+  // 检查工具注册表版本是否变化，变化则清除缓存
+  if (registry.version !== cachedRegistryVersion) {
+    staticPromptPrefix = null
+    cachedRegistryVersion = registry.version
+  }
 
-  const commandLimit = needsCommandLimit ? `
-## execute_command 限制
-每次只执行一条命令，禁止 && || ; | 连接多条命令` : ''
-
-  return `你是智能助手，可调用工具完成任务。
+  if (staticPromptPrefix === null) {
+    const toolDescriptions = registry.formatToolDescriptions()
+    staticPromptPrefix = `你是智能助手，可调用工具完成任务。
 
 ## 可用工具
 
-${toolDescriptions}${commandLimit}
+${toolDescriptions}
 
 ## 输出格式（必须严格遵守）
 
@@ -164,9 +168,41 @@ ${toolDescriptions}${commandLimit}
 7. 不要重复执行相同命令
 8. 使用中文回答
 
+`
+  }
+  return staticPromptPrefix
+}
+
+/**
+ * 构建静态提示词后缀（固定结尾）
+ */
+function buildStaticSuffix(): string {
+  if (staticPromptSuffix === null) {
+    staticPromptSuffix = `
+根据对话历史中的最新消息，判断当前状态并决定下一步行动，输出对应的 JSON。`
+  }
+  return staticPromptSuffix
+}
+
+/**
+ * 构建系统提示词
+ */
+export function buildSystemPrompt(
+  registry: ToolRegistry,
+  ctx: PromptContext,
+): string {
+  const prefix = buildStaticPrefix(registry)
+  const suffix = buildStaticSuffix()
+  const history = formatHistory(ctx.history)
+  const needsCommandLimit = needsCommandRestrictions(ctx.history)
+
+  const commandLimit = needsCommandLimit ? `
+## execute_command 限制
+每次只执行一条命令，禁止 && || ; | 连接多条命令` : ''
+
+  return `${prefix}${commandLimit}
+
 ## 对话历史
 
-${history}
-
-根据对话历史中的最新消息，判断当前状态并决定下一步行动，输出对应的 JSON。`
+${history}${suffix}`
 }

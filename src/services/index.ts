@@ -3,11 +3,12 @@
  * Creates the appropriate LLM provider based on configuration
  */
 
+import type { ProviderType } from '../types/shared.js'
 import type { LLMProvider, ProviderConfig } from './types.js'
 import { DeepSeekProvider } from './providers/deepseek.js'
 import { MimoProvider } from './providers/mimo.js'
 
-export type ProviderType = 'deepseek' | 'mimo'
+export type { ProviderType }
 
 export function createProvider(config: ProviderConfig & { provider?: ProviderType }): LLMProvider {
   const provider = config.provider || 'deepseek'

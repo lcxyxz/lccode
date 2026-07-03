@@ -1,8 +1,7 @@
 /**
  * Agent 主逻辑
- * 实现 ReAct（Reasoning + Acting）模式
  */
-
+ 
 import { writeFileSync, readFileSync } from 'node:fs'
 import { createProvider, type LLMProvider } from '../services/index.js'
 import type { ChatMessage } from '../services/types.js'
@@ -11,9 +10,9 @@ import { executeCommandTool } from './tools/command-tool.js'
 import { readFileTool, writeFileTool, editFileTool, deleteFileTool, deleteDirectoryTool } from './tools/file-tools.js'
 import { buildSystemPrompt } from './prompts/prompt-template.js'
 import type { AgentConfig, AgentEvent } from '../types/index.js'
-import { 
-  parseLLMOutput, 
-  isToolCallOutput, 
+import {
+  parseLLMOutput,
+  isToolCallOutput,
   isFinalAnswerOutput,
   isNeedClarificationOutput,
   isErrorOutput,
@@ -21,31 +20,48 @@ import {
 } from '../types/llm-output.js'
 import { detectLanguage } from '../utils/language.js'
 import { Logger, type LoggerConfig, LogLevel } from '../utils/logger.js'
+import { McpManager } from './mcp/manager.js'
 
 // ===================== Agent 类 =====================
 
 export class Agent {
   private provider: LLMProvider
   private registry: ToolRegistry
+  private mcpManager: McpManager
   private chatHistory: ChatMessage[] = []
   private maxHistory = 20
   private currentQueryStartIndex = 0
   private logger: Logger
 
-  constructor(config: AgentConfig, loggerConfig?: LoggerConfig) {
+  private constructor(config: AgentConfig, loggerConfig?: LoggerConfig) {
     this.provider = createProvider(config)
     this.registry = new ToolRegistry()
+    this.mcpManager = new McpManager()
     this.logger = new Logger(loggerConfig)
-    
+
     this.registry.register(executeCommandTool)
     this.registry.register(readFileTool)
     this.registry.register(writeFileTool)
     this.registry.register(editFileTool)
     this.registry.register(deleteFileTool)
     this.registry.register(deleteDirectoryTool)
-    
+
     this.logger.clear()
     this.logger.info('Agent initialized')
+  }
+
+  static async create(config: AgentConfig, loggerConfig?: LoggerConfig): Promise<Agent> {
+    const agent = new Agent(config, loggerConfig)
+
+    try {
+      const mcpTools = await agent.mcpManager.loadFromConfig()
+      mcpTools.forEach(tool => agent.registry.register(tool))
+      agent.logger.info(`MCP tools loaded: ${mcpTools.length}`)
+    } catch (error) {
+      agent.logger.error('Failed to load MCP config:', error)
+    }
+
+    return agent
   }
 
   getToolRegistry(): ToolRegistry {
@@ -250,5 +266,9 @@ ${failure.hint}
 
   clearHistory() {
     this.chatHistory = []
+  }
+
+  async disconnect(): Promise<void> {
+    await this.mcpManager.disconnectAll()
   }
 }

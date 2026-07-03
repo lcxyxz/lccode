@@ -5,6 +5,7 @@
 ## 功能特性
 
 - AI 对话：支持 DeepSeek 和 Mimo 两家服务商
+- MCP 协议：支持 Model Context Protocol，可连接外部工具服务器
 - 命令执行：AI 可以生成并执行终端命令
 - 实时反馈：命令执行结果实时显示
 - 思考过程：显示 AI 的思考过程（可选）
@@ -89,6 +90,27 @@ EOF
 | `baseUrl` | 否 | 自定义 API 地址（可选） |
 | `model` | 否 | 模型名称（可选，使用提供商默认值） |
 
+### MCP 配置
+
+MCP (Model Context Protocol) 允许 AI 连接外部工具服务器。在 `~/.lccode/mcp.json` 中配置：
+
+```bash
+mkdir -p ~/.lccode
+cat > ~/.lccode/mcp.json << 'EOF'
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-github"],
+      "env": {
+        "GITHUB_TOKEN": "your-github-token"
+      }
+    }
+  }
+}
+EOF
+```
+
 
 ### 全局安装（推荐）
 
@@ -133,9 +155,18 @@ npm run test:watch
 lccode/
 ├── src/
 │   ├── agent/           # AI 核心逻辑
+│   │   ├── mcp/         # MCP 协议实现
+│   │   │   ├── adapter.ts    # MCP 工具适配器
+│   │   │   ├── client.ts     # MCP 客户端
+│   │   │   ├── manager.ts    # MCP 管理器
+│   │   │   └── types.ts      # MCP 类型定义
+│   │   ├── prompts/     # 提示词模板
+│   │   ├── tools/       # 工具注册中心
+│   │   └── agent.ts     # Agent 主逻辑
 │   ├── frontend/        # Ink 组件
 │   ├── services/        # API 服务
 │   │   ├── providers/   # AI 服务提供商实现
+│   │   │   ├── base.ts       # OpenAI 兼容基类
 │   │   │   ├── deepseek.ts
 │   │   │   └── mimo.ts
 │   │   ├── index.ts     # 提供商工厂
@@ -151,7 +182,7 @@ lccode/
 ## 任务清单
 
 - [x] **多厂商模型支持**：接入 DeepSeek 和 Mimo 两家人工智能服务商，灵活切换模型
-- [ ] **MCP 协议集成**：支持 Model Context Protocol，扩展 AI 与外部工具的互联能力
+- [x] **MCP 协议集成**：支持 Model Context Protocol，扩展 AI 与外部工具的互联能力
 - [ ] **Skill 技能系统**：支持自定义技能/工具，让 AI 调用更丰富的本地能力（如文件搜索、代码分析等）
 - [ ] **会话历史管理**：支持保存和加载历史对话，方便回溯
 - [ ] **配置热重载**：修改配置文件后无需重启即可生效
@@ -163,6 +194,7 @@ lccode/
 - **运行时**: Node.js + TypeScript
 - **UI 框架**: Ink (React for CLI)
 - **AI 服务**: DeepSeek、Mimo
+- **协议支持**: MCP (Model Context Protocol)
 - **构建工具**: TypeScript + tsx
 - **测试**: Vitest
 
@@ -175,6 +207,10 @@ lccode/
 **Q: 如何更换模型或 API Key？**
 
 编辑 `~/.lccode.json` 文件即可，修改后下次启动自动生效。
+
+**Q: MCP 工具如何使用？**
+
+配置 `~/.lccode/mcp.json` 后，启动时会自动加载所有配置的 MCP 服务器。AI 会根据对话需要自动调用相应的 MCP 工具。
 
 ## 写在后面
 

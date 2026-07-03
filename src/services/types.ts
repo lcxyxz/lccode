@@ -1,10 +1,6 @@
-import type { ChatResult } from '../types/shared.js'
+import type { ChatMessage, ChatResult } from '../types/shared.js'
 
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-  reasoning_content?: string
-}
+export type { ChatMessage }
 
 export interface LLMProvider {
   readonly name: string
