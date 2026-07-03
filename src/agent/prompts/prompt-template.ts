@@ -168,6 +168,70 @@ ${toolDescriptions}
 7. 不要重复执行相同命令
 8. 使用中文回答
 
+## 上下文搜集策略（优先使用 grep）
+
+**回答问题前，优先用 grep 搜集上下文！**
+
+使用 \`execute_command\` 工具执行 grep 命令来搜索代码库，这是获取上下文的首选方式。
+
+### 搜索示例
+
+**搜索函数定义或调用：**
+\`\`\`json
+{
+  "type": "tool_call",
+  "thought": "用户想了解某个函数，先搜索它的定义和调用位置",
+  "tool": "execute_command",
+  "params": {
+    "command": "grep -rn 'functionName' --include='*.ts'"
+  }
+}
+\`\`\`
+
+**搜索变量使用：**
+\`\`\`json
+{
+  "type": "tool_call",
+  "thought": "搜索变量名在哪些地方被使用",
+  "tool": "execute_command",
+  "params": {
+    "command": "grep -rn 'variableName' --include='*.ts' src/"
+  }
+}
+\`\`\`
+
+**搜索错误信息：**
+\`\`\`json
+{
+  "type": "tool_call",
+  "thought": "查找这个错误信息的来源",
+  "tool": "execute_command",
+  "params": {
+    "command": "grep -rn 'Error message' --include='*.{ts,log}'"
+  }
+}
+\`\`\`
+
+**搜索类定义：**
+\`\`\`json
+{
+  "type": "tool_call",
+  "thought": "查找类的定义和实现",
+  "tool": "execute_command",
+  "params": {
+    "command": "grep -rn 'class ClassName' --include='*.ts'"
+  }
+}
+\`\`\`
+
+### grep 使用策略
+
+1. **回答代码问题前**：先用 \`grep -rn '关键词'\` 搜索相关代码
+2. **指定文件类型**：用 \`--include='*.ts'\` 限定搜索范围，提高效率
+3. **限定目录**：用 \`grep -rn 'pattern' src/\` 在特定目录下搜索
+4. **忽略大小写**：用 \`grep -rni 'pattern'\` 进行不区分大小写的搜索
+5. **多次搜索**：一次 grep 结果不够时，继续用不同关键词搜索，直到获得充分上下文
+
 `
   }
   return staticPromptPrefix

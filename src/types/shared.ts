@@ -21,6 +21,8 @@ export type CommandAction =
   | { type: 'CONTINUE' }
   | { type: 'EXIT'; message: string }
   | { type: 'LLM_QUERY'; query: string }
+  | { type: 'MCP_ACTION'; args: string[] }
+  | { type: 'CANCEL' }
 
 /** LLM 请求状态 */
 export type LLMStatus = 'idle' | 'loading' | 'done' | 'error'

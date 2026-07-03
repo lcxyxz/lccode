@@ -6,10 +6,11 @@ interface InputLineProps {
   value: string
   onChange: (value: string) => void
   onSubmit: (value: string) => void
+  onCancel?: () => void
   llmStatus: LLMStatus
 }
 
-export function InputLine({ value, onChange, onSubmit, llmStatus }: InputLineProps) {
+export function InputLine({ value, onChange, onSubmit, onCancel, llmStatus }: InputLineProps) {
   const promptColor = llmStatus === 'loading' ? 'yellow' : 'green'
   const statusIcon = llmStatus === 'loading' ? '...' : llmStatus === 'error' ? '!' : '>'
 
@@ -21,6 +22,9 @@ export function InputLine({ value, onChange, onSubmit, llmStatus }: InputLinePro
         onChange={onChange}
         onSubmit={onSubmit}
       />
+      {llmStatus === 'loading' && onCancel && (
+        <Text color="gray"> (按Esc取消)</Text>
+      )}
     </Box>
   )
 }

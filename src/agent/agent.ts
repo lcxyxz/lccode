@@ -32,6 +32,7 @@ export class Agent {
   private maxHistory = 20
   private currentQueryStartIndex = 0
   private logger: Logger
+  private abortController: AbortController | null = null
 
   private constructor(config: AgentConfig, loggerConfig?: LoggerConfig) {
     this.provider = createProvider(config)
@@ -56,6 +57,7 @@ export class Agent {
     try {
       const mcpTools = await agent.mcpManager.loadFromConfig()
       mcpTools.forEach(tool => agent.registry.register(tool))
+      agent.refreshToolFilter()
       agent.logger.info(`MCP tools loaded: ${mcpTools.length}`)
     } catch (error) {
       agent.logger.error('Failed to load MCP config:', error)
@@ -66,6 +68,16 @@ export class Agent {
 
   getToolRegistry(): ToolRegistry {
     return this.registry
+  }
+
+  getMcpManager(): McpManager {
+    return this.mcpManager
+  }
+
+  /** 刷新工具过滤器，将 McpManager 的启用状态同步到 ToolRegistry */
+  refreshToolFilter(): void {
+    const activeNames = this.mcpManager.getActiveToolNames()
+    this.registry.setActiveFilter(activeNames)
   }
 
   private buildMessages(): ChatMessage[] {
@@ -117,6 +129,8 @@ ${failure.hint}
     this.currentQueryStartIndex = this.chatHistory.length
     this.chatHistory.push({ role: 'user', content: query })
 
+    this.abortController = new AbortController()
+
     while (round < maxRounds) {
       round++
       
@@ -125,7 +139,16 @@ ${failure.hint}
       const messages = this.buildMessages()
       this.logger.debug('SystemPrompt:', messages[0].content)
 
-      const llmResult = await this.provider.chat(messages)
+      let llmResult
+      try {
+        llmResult = await this.provider.chat(messages, { signal: this.abortController.signal })
+      } catch (error: any) {
+        if (error?.name === 'AbortError' || error?.message?.toLowerCase().includes('abort')) {
+          yield { type: 'error', content: '对话已取消' }
+          return
+        }
+        throw error
+      }
       this.logger.debug('LLM response:', llmResult.response)
 
       if (llmResult.thinking) {
@@ -262,6 +285,10 @@ ${failure.hint}
     const maxRoundsMsg = '任务执行轮次已达上限，请尝试简化问题。'
     yield { type: 'response', content: maxRoundsMsg }
     this.logger.logConversation(query, maxRoundsMsg, maxRounds)
+  }
+
+  cancel() {
+    this.abortController?.abort()
   }
 
   clearHistory() {

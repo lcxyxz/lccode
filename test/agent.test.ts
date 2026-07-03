@@ -23,6 +23,11 @@ vi.mock('../src/agent/mcp/manager.js', () => {
     McpManager: class MockMcpManager {
       loadFromConfig = vi.fn().mockResolvedValue([])
       disconnectAll = vi.fn().mockResolvedValue(undefined)
+      getActiveToolNames = vi.fn().mockReturnValue(new Set())
+      getServerBriefList = vi.fn().mockReturnValue([])
+      enableAll = vi.fn()
+      disableAll = vi.fn()
+      toggleServerByIndex = vi.fn().mockReturnValue(null)
     }
   }
 })

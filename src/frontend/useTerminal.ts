@@ -21,8 +21,12 @@ export function useTerminal(onExit?: () => void) {
   const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ promptTokens: 0, completionTokens: 0, totalTokens: 0 })
   const agentRef = useRef<Agent | null>(null)
   const inputRef = useRef('')
+  const llmStatusRef = useRef<LLMStatus>('idle')
 
   inputRef.current = input
+
+  // 同步llmStatus到ref
+  llmStatusRef.current = llmStatus
 
   useEffect(() => {
     const apiKey = process.env.LCCODE_API_KEY
@@ -76,6 +80,77 @@ export function useTerminal(onExit?: () => void) {
     onExitRef.current?.()
   }, [])
 
+  const cancelAgent = useCallback(() => {
+    agentRef.current?.cancel()
+  }, [])
+
+  const handleMcpAction = useCallback((args: string[]) => {
+    const agent = agentRef.current
+    if (!agent) {
+      actionsRef.current.addMessage('Error: Agent not initialized.', 'yellow')
+      return
+    }
+
+    const mcpManager = agent.getMcpManager()
+    const subcmd = args[0]?.toLowerCase()
+
+    if (!subcmd || subcmd === 'list' || subcmd === 'status') {
+      const servers = mcpManager.getServerBriefList()
+      if (servers.length === 0) {
+        actionsRef.current.addMessage('No MCP servers configured.', 'yellow')
+        return
+      }
+
+      let output = 'MCP Servers:\n────────────\n'
+      servers.forEach((s, i) => {
+        const status = s.activeToolCount === s.toolCount ? '✅' :
+          s.activeToolCount > 0 ? '🟡' : '❌'
+        const conn = s.connected ? '●' : '○'
+        output += `  ${i + 1}. ${status} [${conn}] ${s.name} (${s.activeToolCount}/${s.toolCount} tools)\n`
+      })
+      output += '\nUsage:\n'
+      output += '  /mcp           - Show this list\n'
+      output += '  /mcp 1,2       - Toggle servers by number\n'
+      output += '  /mcp all       - Enable all servers\n'
+      output += '  /mcp none      - Disable all servers\n'
+
+      actionsRef.current.addMessage(output, 'cyan')
+      return
+    }
+
+    if (subcmd === 'all') {
+      mcpManager.enableAll()
+      agent.refreshToolFilter()
+      actionsRef.current.addMessage('All MCP servers enabled.', 'green')
+      return
+    }
+
+    if (subcmd === 'none') {
+      mcpManager.disableAll()
+      agent.refreshToolFilter()
+      actionsRef.current.addMessage('All MCP servers disabled.', 'yellow')
+      return
+    }
+
+    const numbers = args.join(',').split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n))
+    if (numbers.length === 0) {
+      actionsRef.current.addMessage('Invalid usage. See /mcp for help.', 'yellow')
+      return
+    }
+
+    const results: string[] = []
+    for (const num of numbers) {
+      const result = mcpManager.toggleServerByIndex(num - 1)
+      if (result) {
+        results.push(`${result.server} → ${result.enabled ? 'enabled' : 'disabled'} (${result.toolCount} tools)`)
+      } else {
+        results.push(`#${num}: invalid server number`)
+      }
+    }
+    agent.refreshToolFilter()
+    actionsRef.current.addMessage(results.join('\n'), 'cyan')
+  }, [])
+
   const callAgent = useCallback(async (query: string) => {
     const agent = agentRef.current
     if (!agent) {
@@ -85,6 +160,8 @@ export function useTerminal(onExit?: () => void) {
 
     actionsRef.current.resetCommandList()
     setLlmStatus('loading')
+
+    let cancelled = false
 
     try {
       for await (const event of agent.processInput(query)) {
@@ -104,6 +181,9 @@ export function useTerminal(onExit?: () => void) {
             actionsRef.current.addResponse(event.content ?? '')
             break
           case 'error':
+            if (event.content === '对话已取消') {
+              cancelled = true
+            }
             actionsRef.current.addMessage(event.content ?? 'Unknown error', 'yellow')
             break
           case 'token_usage':
@@ -127,10 +207,9 @@ export function useTerminal(onExit?: () => void) {
         }
       }
 
-      setLlmStatus('done')
+      setLlmStatus(cancelled ? 'idle' : 'done')
     } catch (error: any) {
-      const msg = error?.message || 'Unknown error'
-      actionsRef.current.addMessage(`LLM Error: ${msg}`, 'yellow')
+      actionsRef.current.addMessage(`LLM Error: ${error?.message || 'Unknown error'}`, 'yellow')
       setLlmStatus('error')
     }
   }, [])
@@ -151,17 +230,36 @@ export function useTerminal(onExit?: () => void) {
       onExitRef.current?.()
     } else if (action.type === 'LLM_QUERY') {
       callAgent(action.query)
+    } else if (action.type === 'MCP_ACTION') {
+      handleMcpAction(action.args)
+    } else if (action.type === 'CANCEL') {
+      cancelAgent()
     }
-  }, [callAgent])
+  }, [callAgent, cancelAgent])
 
   const handleChange = useCallback((value: string) => {
     setInput(value)
   }, [])
 
   useInput((char, key) => {
+    // 处理Ctrl+C
     if (key.ctrl && char === 'c') {
       handleCtrlC()
       return
+    }
+
+    // 处理Escape键 - 取消对话
+    if (key.escape) {
+      // 如果正在加载，取消对话
+      if (llmStatusRef.current === 'loading') {
+        cancelAgent()
+        return
+      }
+      // 如果斜杠建议显示，关闭建议
+      if (slashRef.current.showSuggestions) {
+        slashRef.current.dismiss()
+        return
+      }
     }
 
     if (key.upArrow && slashRef.current.showSuggestions) {
@@ -191,11 +289,6 @@ export function useTerminal(onExit?: () => void) {
       return
     }
 
-    if (key.escape && slashRef.current.showSuggestions) {
-      slashRef.current.dismiss()
-      return
-    }
-
     if (key.upArrow && inputRef.current === '') {
       const histCmd = navigateUp()
       if (histCmd !== null) {
@@ -218,6 +311,7 @@ export function useTerminal(onExit?: () => void) {
     tokenUsage,
     handleSubmit,
     handleChange,
+    cancelAgent,
     showSuggestions: slash.showSuggestions,
     filteredCommands: slash.filteredCommands,
     selectedIndex: slash.selectedIndex,
