@@ -32,6 +32,14 @@ AI 编辑文件后，实时展示修改后的完整代码：
 
 ![最终效果](imgs/image3.png)
 
+### 使用wordmcp工具
+
+![最终效果](imgs/image4.png)
+
+![最终效果](imgs/image5.png)
+
+实现稳定操作mcp工具
+
 ## 快速开始
 
 ### 安装依赖
