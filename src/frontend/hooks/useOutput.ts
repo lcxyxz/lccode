@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef } from 'react'
-import type { OutputSection } from '../../types/index.js'
+import type { OutputSection, DiffLine } from '../../types/index.js'
 
 export function useOutput() {
   const [sections, setSections] = useState<OutputSection[]>([
-    { id: 0, type: 'message', title: '', content: 'Welcome to Terminal Assistant v0.1.0', collapsed: false, color: 'cyan' },
+    { id: 0, type: 'message', title: '', content: 'Welcome to lccode v0.1.0', collapsed: false, color: 'cyan' },
     { id: 1, type: 'message', title: '', content: 'Type "/help" to see available commands', collapsed: false, color: 'gray' },
   ])
 
@@ -63,12 +63,12 @@ export function useOutput() {
     }
   }, [])
 
-  const addCodePreview = useCallback((filePath: string, language: string, content: string) => {
+  const addDiffPreview = useCallback((filePath: string, language: string, lines: DiffLine[]) => {
     const id = idCounterRef.current++
     setSections(prev => [...prev, {
-      id, type: 'code_preview', title: filePath,
-      content, collapsed: false, color: 'white',
-      codePreview: { filePath, language, content },
+      id, type: 'diff_preview', title: filePath,
+      content: '', collapsed: false, color: 'white',
+      diffPreview: { filePath, language, lines },
     }])
   }, [])
 
@@ -77,7 +77,7 @@ export function useOutput() {
     addMessage,
     addCommandResult,
     addResponse,
-    addCodePreview,
+    addDiffPreview,
     clearSections,
     resetCommandList,
   }

@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink'
 import type { OutputSection as OutputSectionType } from '../../types/index.js'
 import Markdown from './Markdown.js'
-import { CodePreview } from './CodePreview.js'
+import { DiffPreview } from './DiffPreview.js'
 
 const MAX_CONTENT_LENGTH = 10000
 
@@ -13,15 +13,15 @@ export function OutputSection({ section }: OutputSectionProps) {
   if (!section) return null
 
   const { type, content, color } = section
-  if (typeof content !== 'string' && type !== 'code_preview') return null
-  if (type !== 'code_preview' && !content) return null
+  if (typeof content !== 'string' && type !== 'diff_preview') return null
+  if (type !== 'diff_preview' && !content) return null
 
-  if (type === 'code_preview' && section.codePreview) {
+  if (type === 'diff_preview' && section.diffPreview) {
     return (
-      <CodePreview
-        filePath={section.codePreview.filePath}
-        language={section.codePreview.language}
-        content={section.codePreview.content}
+      <DiffPreview
+        filePath={section.diffPreview.filePath}
+        language={section.diffPreview.language}
+        lines={section.diffPreview.lines}
       />
     )
   }

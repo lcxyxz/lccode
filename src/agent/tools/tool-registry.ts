@@ -17,10 +17,25 @@ export interface Tool {
   execute: (params: Record<string, any>) => Promise<ToolResult>
 }
 
+/** 差异行类型 */
+export type DiffLineType = 'added' | 'removed' | 'unchanged'
+
+/** 差异行 */
+export interface DiffLine {
+  type: DiffLineType
+  lineNumber: number
+  content: string
+}
+
 export interface ToolResult {
   success: boolean
   output: string
   error?: string
+  diff?: {
+    filePath: string
+    language: string
+    lines: DiffLine[]
+  }
 }
 
 /**

@@ -10,7 +10,7 @@ import { LogLevel } from '../utils/logger.js'
 
 export function useTerminal(onExit?: () => void) {
   const {
-    sections, addMessage, addCommandResult, addResponse, addCodePreview,
+    sections, addMessage, addCommandResult, addResponse, addDiffPreview,
     clearSections, resetCommandList,
   } = useOutput()
   const { addHistory, navigateUp } = useCommandHistory()
@@ -22,6 +22,7 @@ export function useTerminal(onExit?: () => void) {
   const agentRef = useRef<Agent | null>(null)
   const inputRef = useRef('')
   const llmStatusRef = useRef<LLMStatus>('idle')
+  const confirmationPendingRef = useRef(false)
 
   inputRef.current = input
 
@@ -49,7 +50,7 @@ export function useTerminal(onExit?: () => void) {
     addMessage,
     addCommandResult,
     addResponse,
-    addCodePreview,
+    addDiffPreview,
     addHistory,
     clearSections,
     resetCommandList,
@@ -59,7 +60,7 @@ export function useTerminal(onExit?: () => void) {
     addMessage,
     addCommandResult,
     addResponse,
-    addCodePreview,
+    addDiffPreview,
     addHistory,
     clearSections,
     resetCommandList,
@@ -186,6 +187,10 @@ export function useTerminal(onExit?: () => void) {
             }
             actionsRef.current.addMessage(event.content ?? 'Unknown error', 'yellow')
             break
+          case 'confirmation_request':
+            confirmationPendingRef.current = true
+            actionsRef.current.addMessage(`⚠ 危险命令需要确认: ${event.content}\n输入 y 确认，其他任意键取消`, 'yellow')
+            break
           case 'token_usage':
             if (event.usage) {
               setTokenUsage((prev) => ({
@@ -195,12 +200,12 @@ export function useTerminal(onExit?: () => void) {
               }))
             }
             break
-          case 'code_preview':
-            if (event.codePreview) {
-              actionsRef.current.addCodePreview(
-                event.codePreview.filePath,
-                event.codePreview.language,
-                event.codePreview.content,
+          case 'diff_preview':
+            if (event.diffPreview) {
+              actionsRef.current.addDiffPreview(
+                event.diffPreview.filePath,
+                event.diffPreview.language,
+                event.diffPreview.lines,
               )
             }
             break
@@ -217,6 +222,19 @@ export function useTerminal(onExit?: () => void) {
   const handleSubmit = useCallback((line: string) => {
     if (showSuggestionsRef.current) return
     if (!line.trim()) return
+
+    // 危险命令确认处理
+    if (confirmationPendingRef.current) {
+      confirmationPendingRef.current = false
+      const answer = line.trim().toLowerCase()
+      if (answer === 'y' || answer === 'yes') {
+        agentRef.current?.respondToConfirmation(true)
+      } else {
+        agentRef.current?.respondToConfirmation(false)
+      }
+      setInput('')
+      return
+    }
 
     const action = processCommand(line, {
       addLine: actionsRef.current.addMessage,

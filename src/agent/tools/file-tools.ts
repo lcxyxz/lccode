@@ -1,6 +1,126 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, statSync, rmSync } from 'node:fs'
-import { dirname } from 'node:path'
-import type { Tool, ToolResult } from './tool-registry.js'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, statSync, rmSync, readdirSync, type Dirent } from 'node:fs'
+import { dirname, extname, join, relative } from 'node:path'
+import type { Tool, ToolResult, DiffLine } from './tool-registry.js'
+
+/**
+ * 计算两段文本的差异
+ */
+function computeDiff(oldText: string, newText: string): DiffLine[] {
+  const oldLines = oldText.split('\n')
+  const newLines = newText.split('\n')
+  const result: DiffLine[] = []
+
+  // 简单的差异算法：逐行比较
+  const maxLen = Math.max(oldLines.length, newLines.length)
+  let oldIdx = 0
+  let newIdx = 0
+
+  while (oldIdx < oldLines.length || newIdx < newLines.length) {
+    if (oldIdx >= oldLines.length) {
+      // 旧文本已结束，剩余都是新增
+      result.push({ type: 'added', lineNumber: newIdx + 1, content: newLines[newIdx] })
+      newIdx++
+    } else if (newIdx >= newLines.length) {
+      // 新文本已结束，剩余都是删除
+      result.push({ type: 'removed', lineNumber: oldIdx + 1, content: oldLines[oldIdx] })
+      oldIdx++
+    } else if (oldLines[oldIdx] === newLines[newIdx]) {
+      // 相同行
+      result.push({ type: 'unchanged', lineNumber: newIdx + 1, content: newLines[newIdx] })
+      oldIdx++
+      newIdx++
+    } else {
+      // 不同行，尝试向后查找匹配
+      let foundInNew = -1
+      let foundInOld = -1
+
+      // 在新文本中查找当前旧行
+      for (let i = newIdx; i < Math.min(newIdx + 5, newLines.length); i++) {
+        if (newLines[i] === oldLines[oldIdx]) {
+          foundInNew = i
+          break
+        }
+      }
+
+      // 在旧文本中查找当前新行
+      for (let i = oldIdx; i < Math.min(oldIdx + 5, oldLines.length); i++) {
+        if (oldLines[i] === newLines[newIdx]) {
+          foundInOld = i
+          break
+        }
+      }
+
+      if (foundInNew === -1 && foundInOld === -1) {
+        // 都没找到，视为替换
+        result.push({ type: 'removed', lineNumber: oldIdx + 1, content: oldLines[oldIdx] })
+        result.push({ type: 'added', lineNumber: newIdx + 1, content: newLines[newIdx] })
+        oldIdx++
+        newIdx++
+      } else if (foundInNew !== -1 && (foundInOld === -1 || foundInNew - newIdx <= foundInOld - oldIdx)) {
+        // 新文本中有匹配，说明旧文本中有删除
+        while (oldIdx < foundInOld || oldIdx < oldLines.length && oldLines[oldIdx] !== newLines[newIdx]) {
+          if (oldIdx < oldLines.length) {
+            result.push({ type: 'removed', lineNumber: oldIdx + 1, content: oldLines[oldIdx] })
+            oldIdx++
+          }
+        }
+      } else {
+        // 旧文本中有匹配，说明新文本中有新增
+        while (newIdx < foundInNew || newIdx < newLines.length && newLines[newIdx] !== oldLines[oldIdx]) {
+          if (newIdx < newLines.length) {
+            result.push({ type: 'added', lineNumber: newIdx + 1, content: newLines[newIdx] })
+            newIdx++
+          }
+        }
+      }
+    }
+  }
+
+  return result
+}
+
+/**
+ * 根据文件扩展名获取语言
+ */
+function getLanguageFromPath(filePath: string): string {
+  const ext = extname(filePath).toLowerCase()
+  const langMap: Record<string, string> = {
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.py': 'python',
+    '.java': 'java',
+    '.c': 'c',
+    '.cpp': 'cpp',
+    '.h': 'c',
+    '.hpp': 'cpp',
+    '.cs': 'csharp',
+    '.go': 'go',
+    '.rs': 'rust',
+    '.rb': 'ruby',
+    '.php': 'php',
+    '.swift': 'swift',
+    '.kt': 'kotlin',
+    '.scala': 'scala',
+    '.html': 'html',
+    '.css': 'css',
+    '.scss': 'scss',
+    '.less': 'less',
+    '.json': 'json',
+    '.yaml': 'yaml',
+    '.yml': 'yaml',
+    '.md': 'markdown',
+    '.sql': 'sql',
+    '.sh': 'bash',
+    '.bash': 'bash',
+    '.zsh': 'bash',
+    '.ps1': 'powershell',
+    '.bat': 'batch',
+    '.cmd': 'batch',
+  }
+  return langMap[ext] || 'text'
+}
 
 /**
  * 读取文件内容
@@ -96,6 +216,7 @@ export const editFileTool: Tool = {
 
       const content = readFileSync(filePath, 'utf-8')
       const lines = content.split('\n')
+      const language = getLanguageFromPath(filePath)
 
       // 模式1：按行范围替换
       if (params.start_line && params.end_line) {
@@ -110,13 +231,21 @@ export const editFileTool: Tool = {
           }
         }
 
+        const oldSection = lines.slice(start - 1, end).join('\n')
         const newLines = params.new_text.split('\n')
         lines.splice(start - 1, end - start + 1, ...newLines)
         writeFileSync(filePath, lines.join('\n'), 'utf-8')
 
+        const diffLines = computeDiff(oldSection, params.new_text)
+
         return {
           success: true,
           output: `已替换第 ${start}-${end} 行为新内容（${newLines.length} 行）`,
+          diff: {
+            filePath,
+            language,
+            lines: diffLines,
+          },
         }
       }
 
@@ -133,7 +262,17 @@ export const editFileTool: Tool = {
         const newContent = content.replace(params.old_text, params.new_text)
         writeFileSync(filePath, newContent, 'utf-8')
 
-        return { success: true, output: `已替换匹配的文本` }
+        const diffLines = computeDiff(params.old_text, params.new_text)
+
+        return {
+          success: true,
+          output: `已替换匹配的文本`,
+          diff: {
+            filePath,
+            language,
+            lines: diffLines,
+          },
+        }
       }
 
       return {
@@ -203,6 +342,206 @@ export const deleteDirectoryTool: Tool = {
       return { success: true, output: `已删除文件夹: ${dirPath}` }
     } catch (error: any) {
       return { success: false, output: '', error: `删除失败: ${error.message}` }
+    }
+  },
+}
+
+// ===================== 搜索和目录工具 =====================
+
+/** 需要跳过的目录 */
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '__pycache__', '.next', '.nuxt'])
+
+/**
+ * 将 glob 模式转为正则
+ */
+function globToRegex(pattern: string): RegExp {
+  const hasWildcard = pattern.includes('*') || pattern.includes('?')
+  if (hasWildcard) {
+    const escaped = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '.*')
+      .replace(/\?/g, '.')
+    return new RegExp(`^${escaped}$`, 'i')
+  }
+  // 无通配符时，使用包含匹配
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(escaped, 'i')
+}
+
+/**
+ * 递归搜索文件内容（跨平台 grep 替代）
+ */
+function searchContent(
+  dir: string,
+  query: string,
+  filePattern: string | undefined,
+  results: string[],
+  maxResults: number,
+  cwd: string,
+): void {
+  if (results.length >= maxResults) return
+
+  let entries: Dirent[]
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+
+  const queryRegex = new RegExp(query, 'gi')
+
+  for (const entry of entries) {
+    if (results.length >= maxResults) break
+    if (SKIP_DIRS.has(entry.name)) continue
+
+    const fullPath = join(dir, entry.name)
+
+    if (entry.isDirectory()) {
+      searchContent(fullPath, query, filePattern, results, maxResults, cwd)
+    } else if (entry.isFile()) {
+      if (filePattern) {
+        const regex = globToRegex(filePattern)
+        if (!regex.test(entry.name)) continue
+      }
+
+      try {
+        const content = readFileSync(fullPath, 'utf-8')
+        const lines = content.split('\n')
+        for (let i = 0; i < lines.length; i++) {
+          if (queryRegex.test(lines[i])) {
+            const relPath = relative(cwd, fullPath)
+            results.push(`${relPath}:${i + 1}: ${lines[i].trim()}`)
+            queryRegex.lastIndex = 0
+            if (results.length >= maxResults) break
+          }
+        }
+      } catch {
+        // 跳过二进制文件或不可读文件
+      }
+    }
+  }
+}
+
+/**
+ * 递归搜索文件名（跨平台 find 替代）
+ */
+function searchFiles(
+  dir: string,
+  pattern: string,
+  results: string[],
+  maxResults: number,
+  cwd: string,
+): void {
+  if (results.length >= maxResults) return
+
+  let entries: Dirent[]
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+
+  const regex = globToRegex(pattern)
+
+  for (const entry of entries) {
+    if (results.length >= maxResults) break
+    if (SKIP_DIRS.has(entry.name)) continue
+
+    const fullPath = join(dir, entry.name)
+
+    if (entry.isDirectory()) {
+      searchFiles(fullPath, pattern, results, maxResults, cwd)
+    } else if (entry.isFile() && regex.test(entry.name)) {
+      results.push(relative(cwd, fullPath))
+    }
+  }
+}
+
+/**
+ * 跨平台搜索工具（替代 grep/find 命令）
+ * 内容搜索底层基于正则匹配，文件搜索基于 glob 匹配
+ */
+export const searchTool: Tool = {
+  name: 'search',
+  description: '跨平台搜索：支持内容搜索（替代 grep）和文件名搜索（替代 find/dir）。优先使用此工具而非 execute_command 进行搜索',
+  parameters: [
+    { name: 'query', type: 'string', description: '搜索关键词（内容搜索时支持正则表达式，文件搜索时支持通配符如 *.ts）', required: true },
+    { name: 'path', type: 'string', description: '搜索目录路径，默认当前目录', required: false },
+    { name: 'file_pattern', type: 'string', description: '文件类型过滤，如 "*.ts" 或 "*.ts,*.js"', required: false },
+    { name: 'type', type: 'string', description: '搜索类型: "content" 搜索文件内容（默认），"files" 搜索文件名', required: false },
+  ],
+  execute: async (params): Promise<ToolResult> => {
+    try {
+      const query = params.query
+      const searchPath = params.path || '.'
+      const filePattern = params.file_pattern
+      const searchType = params.type || 'content'
+      const cwd = process.cwd()
+
+      if (!existsSync(searchPath)) {
+        return { success: false, output: '', error: `路径不存在: ${searchPath}` }
+      }
+
+      const results: string[] = []
+
+      if (searchType === 'files') {
+        // 文件名搜索
+        searchFiles(searchPath, query, results, 200, cwd)
+        const output = results.length > 0
+          ? `找到 ${results.length} 个文件：\n${results.join('\n')}`
+          : '未找到匹配的文件'
+        return { success: true, output }
+      }
+
+      // 内容搜索
+      // 支持逗号分隔的多文件类型
+      const patterns = filePattern ? filePattern.split(',').map((s: string) => s.trim()) : undefined
+
+      if (patterns && patterns.length > 1) {
+        for (const pat of patterns) {
+          searchContent(searchPath, query, pat, results, 500, cwd)
+        }
+      } else {
+        searchContent(searchPath, query, filePattern, results, 500, cwd)
+      }
+
+      const output = results.length > 0
+        ? `找到 ${results.length} 处匹配：\n${results.join('\n')}`
+        : '未找到匹配内容'
+      return { success: true, output }
+    } catch (error: any) {
+      return { success: false, output: '', error: `搜索失败: ${error.message}` }
+    }
+  },
+}
+
+/**
+ * 创建文件夹工具（替代 mkdir 命令）
+ */
+export const addDirTool: Tool = {
+  name: 'add_dir',
+  description: '创建文件夹（支持递归创建父目录）。优先使用此工具而非 execute_command 执行 mkdir',
+  parameters: [
+    { name: 'dir_path', type: 'string', description: '要创建的文件夹路径', required: true },
+    { name: 'recursive', type: 'boolean', description: '是否递归创建父目录，默认 true', required: false },
+  ],
+  execute: async (params): Promise<ToolResult> => {
+    try {
+      const dirPath = params.dir_path
+      const recursive = params.recursive !== false
+
+      if (existsSync(dirPath)) {
+        const stat = statSync(dirPath)
+        if (stat.isDirectory()) {
+          return { success: true, output: `文件夹已存在: ${dirPath}` }
+        }
+        return { success: false, output: '', error: `路径已存在但不是文件夹: ${dirPath}` }
+      }
+
+      mkdirSync(dirPath, { recursive })
+      return { success: true, output: `已创建文件夹: ${dirPath}` }
+    } catch (error: any) {
+      return { success: false, output: '', error: `创建文件夹失败: ${error.message}` }
     }
   },
 }

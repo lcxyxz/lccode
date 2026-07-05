@@ -1,23 +1,29 @@
 /**
  * 命令执行模块
- * 安全地执行 Linux 命令并返回结果
+ * 安全地执行命令并返回结果
  */
 
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
+import { platform } from 'node:os'
 
 const execAsync = promisify(exec)
 
-/** 安全命令白名单（仅允许只读命令） */
+/** 检测当前操作系统 */
+const isWindows = platform() === 'win32'
+
+/** 安全命令白名单（Linux/Windows 通用） */
 const SAFE_COMMANDS = [
   'ls', 'pwd', 'cat', 'grep', 'find', 'head', 'tail', 'wc', 'echo',
   'ps', 'df', 'du', 'free', 'uname', 'whoami', 'date', 'cal',
-  'git', 'git log', 'git diff', 'git status', 'git show',
+  'dir', 'cd', 'type', 'where', 'findstr',
+  'tasklist', 'systeminfo', 'hostname', 'time',
   'which', 'file', 'stat', 'tree',
+  'git', 'git log', 'git diff', 'git status', 'git show',
   'npm', 'npx', 'yarn', 'pnpm',
 ]
 
-/** 危险命令黑名单 */
+/** 危险命令模式（Linux/Windows 通用） */
 const DANGEROUS_PATTERNS = [
   /rm\s+-rf\s+\//,
   /rm\s+-rf/,
@@ -26,14 +32,18 @@ const DANGEROUS_PATTERNS = [
   /dd\s+if=/,
   /:\(\)\{.*\|.*&\s*\}:/,
   /chmod\s+777/,
-  /\|\s*tee\b/,
-  />\s*\S+/,           // shell 重定向 >
-  />>\s*\S+/,          // 追加重定向 >>
-  /<\s*\S+/,           // 输入重定向 <
-  /\|\s*(bash|sh)\b/,  // 管道到 shell
+  /rmdir\s+\/s\s+\/q/i,
+  /del\s+\/f\s+\/q/i,
+  /format\s+[a-z]:/i,
+  /rd\s+\/s\s+\/q/i,
+  /erase\s+\/f\s+\/q/i,
+  />\s*\S+/,
+  />>\s*\S+/,
+  /<\s*\S+/,
+  /\|\s*(bash|sh|cmd|powershell)\b/i,
 ]
 
-export interface CommandResult {
+interface CommandResult {
   success: boolean
   command: string
   stdout: string
@@ -44,7 +54,7 @@ export interface CommandResult {
 /**
  * 检查命令是否安全
  */
-export function isCommandSafe(command: string): { safe: boolean; reason?: string } {
+function isCommandSafe(command: string): { safe: boolean; reason?: string } {
   const trimmed = command.trim()
 
   // 检查危险模式
@@ -56,7 +66,7 @@ export function isCommandSafe(command: string): { safe: boolean; reason?: string
 
   // 提取主命令
   const parts = trimmed.split(/\s+/)
-  const mainCommand = parts[0]
+  const mainCommand = parts[0].toLowerCase()
 
   // 检查白名单
   if (!SAFE_COMMANDS.includes(mainCommand)) {
@@ -67,22 +77,72 @@ export function isCommandSafe(command: string): { safe: boolean; reason?: string
 }
 
 /**
- * 执行命令并返回结果
+ * 命令风险等级
+ * - safe: 白名单内且无危险模式，可直接执行
+ * - dangerous: 匹配危险模式，需要用户确认
+ * - unknown: 不在白名单内，需要用户确认
  */
-export async function executeCommand(command: string): Promise<CommandResult> {
-  const safety = isCommandSafe(command)
-  if (!safety.safe) {
-    return {
-      success: false,
-      command,
-      stdout: '',
-      stderr: '',
-      error: safety.reason,
+export type CommandRisk = 'safe' | 'dangerous' | 'unknown'
+
+/**
+ * 对命令进行风险分类
+ */
+export function classifyCommand(command: string): CommandRisk {
+  const trimmed = command.trim()
+
+  // 检查危险模式
+  for (const pattern of DANGEROUS_PATTERNS) {
+    if (pattern.test(trimmed)) {
+      return 'dangerous'
+    }
+  }
+
+  // 提取主命令
+  const parts = trimmed.split(/\s+/)
+  const mainCommand = parts[0].toLowerCase()
+
+  // 检查白名单
+  if (SAFE_COMMANDS.includes(mainCommand)) {
+    return 'safe'
+  }
+
+  return 'unknown'
+}
+
+/**
+ * 获取当前平台信息
+ */
+export function getPlatform(): 'linux' | 'windows' | 'darwin' {
+  const os = platform()
+  if (os === 'win32') return 'windows'
+  if (os === 'darwin') return 'darwin'
+  return 'linux'
+}
+
+/**
+ * 执行命令并返回结果
+ * Windows 下使用 cmd.exe 执行，Linux/Mac 下直接执行
+ * @param force 跳过安全检查（用户已确认时使用）
+ */
+export async function executeCommand(command: string, force: boolean = false): Promise<CommandResult> {
+  if (!force) {
+    const safety = isCommandSafe(command)
+    if (!safety.safe) {
+      return {
+        success: false,
+        command,
+        stdout: '',
+        stderr: '',
+        error: safety.reason,
+      }
     }
   }
 
   try {
-    const { stdout, stderr } = await execAsync(command, {
+    // Windows 下使用 cmd.exe /c 执行命令
+    const execCommand = isWindows ? `cmd.exe /c ${command}` : command
+    
+    const { stdout, stderr } = await execAsync(execCommand, {
       timeout: 10000, // 10 秒超时
       maxBuffer: 1024 * 1024, // 1MB 输出限制
       cwd: process.cwd(),

@@ -15,6 +15,13 @@ export function StatusLine({ llmStatus, modelName, tokenUsage }: StatusLineProps
     error: 'red',
   }[llmStatus]
 
+  const statusIcon = {
+    idle: '○',
+    loading: '◌',
+    done: '●',
+    error: '✗',
+  }[llmStatus]
+
   const formatTokens = (n: number) => {
     if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
     return String(n)
@@ -32,7 +39,7 @@ export function StatusLine({ llmStatus, modelName, tokenUsage }: StatusLineProps
           </Text>
         )}
         <Text color={statusColor}>
-          {llmStatus === 'loading' ? 'Thinking...' :
+          {statusIcon} {llmStatus === 'loading' ? 'Thinking...' :
            llmStatus === 'done' ? 'Ready' :
            llmStatus === 'error' ? 'Error' : 'Idle'}
         </Text>

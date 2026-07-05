@@ -21,7 +21,7 @@ class ErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <Box flexDirection="column">
-          <Header llmStatus="error" />
+          <Header />
           <Box flexDirection="column" marginBottom={1}>
             <Text color="red">Error: {this.state.error}</Text>
             <Text color="gray">Restart the application.</Text>
@@ -41,7 +41,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
 
   return (
     <Box flexDirection="column" height="100%">
-      <Header llmStatus={llmStatus} />
+      <Header />
       <Box flexDirection="column" flexGrow={1}>
         <OutputLines sections={sections} />
       </Box>

@@ -6,15 +6,15 @@ import { adaptMcpTools } from './adapter.js'
 import type { McpConfig, McpServerConfig } from './types.js'
 import type { Tool } from '../tools/tool-registry.js'
 
-const CONFIG_FILE = '.lccode/mcp.json'
+const USER_CONFIG_FILE = '.lccode/mcp.json'
 
-export interface ToolStatus {
+interface ToolStatus {
   name: string
   description: string
   enabled: boolean
 }
 
-export interface ServerStatus {
+interface ServerStatus {
   name: string
   connected: boolean
   tools: ToolStatus[]
@@ -34,7 +34,11 @@ export class McpManager {
 
   /** 从配置文件加载所有 MCP Server，返回适配后的工具列表 */
   async loadFromConfig(): Promise<Tool[]> {
-    const configPath = join(homedir(), CONFIG_FILE)
+    // 优先级：项目级 > 用户级
+    const projectConfigPath = join(process.cwd(), '.lccode/mcp.json')
+    const userConfigPath = join(homedir(), USER_CONFIG_FILE)
+
+    const configPath = existsSync(projectConfigPath) ? projectConfigPath : userConfigPath
     if (!existsSync(configPath)) return []
 
     const config: McpConfig = JSON.parse(readFileSync(configPath, 'utf-8'))

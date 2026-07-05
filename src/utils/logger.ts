@@ -122,17 +122,3 @@ export class Logger {
     this.write('')
   }
 }
-
-let defaultLogger: Logger | null = null
-
-export function getLogger(config?: LoggerConfig): Logger {
-  if (!defaultLogger) {
-    defaultLogger = new Logger(config)
-  }
-  return defaultLogger
-}
-
-export function initLogger(config: LoggerConfig): Logger {
-  defaultLogger = new Logger(config)
-  return defaultLogger
-}

@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync, mkdirSync, existsSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import type { ProviderType } from './types/shared.js'
@@ -12,14 +12,49 @@ export interface LccodeConfig {
   provider?: ProviderType
 }
 
-const CONFIG_FILE = '.lccode.json'
+const USER_CONFIG_DIR = join(homedir(), '.lccode')
+const USER_CONFIG_FILE = join(USER_CONFIG_DIR, 'config.json')
 
-export function loadConfig(): LccodeConfig | null {
-  const configPath = join(homedir(), CONFIG_FILE)
+const PROJECT_CONFIG_DIR = join(process.cwd(), '.lccode')
+const PROJECT_CONFIG_FILE = join(PROJECT_CONFIG_DIR, 'config.json')
+
+export const MEMORY_DIR = join(PROJECT_CONFIG_DIR, 'memory')
+export const MEMORY_SESSIONS_DIR = join(MEMORY_DIR, 'sessions')
+export const MEMORY_INDEX_FILE = join(MEMORY_DIR, 'index.md')
+
+const DEFAULT_CONFIG: LccodeConfig = {
+  apiKey: '',
+  model: 'deepseek-v4-flash',
+  provider: 'deepseek',
+}
+
+const DEFAULT_LOGO = `
+ ▀██▀                          █▄
+  ██                           ██
+  ██      ▄███▀ ▄███▀ ▄███▄ ▄████ ▄█▀█▄
+  ██      ██    ██    ██ ██ ██ ██ ██▄█▀
+ ████████▄▀███▄▄▀███▄▄▀███▀▄█▀███▄▀█▄▄▄`
+
+function initConfigDir(): void {
+  mkdirSync(USER_CONFIG_DIR, { recursive: true })
+  if (!existsSync(USER_CONFIG_FILE)) {
+    writeFileSync(USER_CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2))
+  }
+  if (!existsSync(join(USER_CONFIG_DIR, 'logo.txt'))) {
+    writeFileSync(join(USER_CONFIG_DIR, 'logo.txt'), DEFAULT_LOGO)
+  }
+  // 初始化项目级 .lccode 目录（如果不存在则静默跳过）
+  if (existsSync(PROJECT_CONFIG_DIR)) {
+    mkdirSync(MEMORY_DIR, { recursive: true })
+    mkdirSync(MEMORY_SESSIONS_DIR, { recursive: true })
+  }
+}
+
+function readConfigFile(filePath: string): Partial<LccodeConfig> | null {
   try {
-    const raw = readFileSync(configPath, 'utf-8')
+    if (!existsSync(filePath)) return null
+    const raw = readFileSync(filePath, 'utf-8')
     const data = JSON.parse(raw)
-    if (!data.apiKey) return null
     return {
       apiKey: data.apiKey,
       baseUrl: data.baseUrl,
@@ -29,4 +64,27 @@ export function loadConfig(): LccodeConfig | null {
   } catch {
     return null
   }
+}
+
+export function loadConfig(): LccodeConfig | null {
+  initConfigDir()
+
+  // 优先级：项目级 > 用户级
+  const projectConfig = readConfigFile(PROJECT_CONFIG_FILE)
+  const userConfig = readConfigFile(USER_CONFIG_FILE)
+
+  // 合并：项目级字段覆盖用户级
+  const merged = { ...userConfig, ...projectConfig }
+
+  if (!merged.apiKey) return null
+  return {
+    apiKey: merged.apiKey!,
+    baseUrl: merged.baseUrl,
+    model: merged.model,
+    provider: merged.provider,
+  }
+}
+
+export function getProjectConfigPath(): string | null {
+  return existsSync(PROJECT_CONFIG_FILE) ? PROJECT_CONFIG_FILE : null
 }

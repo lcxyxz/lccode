@@ -1,25 +1,19 @@
 import { Box, Text } from 'ink'
-import type { LLMStatus } from '../../types/index.js'
+import { readFileSync, existsSync } from 'fs'
+import { join } from 'path'
+import { homedir } from 'os'
 
-export function Header({ llmStatus }: { llmStatus: LLMStatus }) {
-  const statusColor = {
-    idle: 'gray',
-    loading: 'yellow',
-    done: 'green',
-    error: 'red',
-  }[llmStatus]
+const logoPath = join(homedir(), '.lccode', 'logo.txt')
+const logo = existsSync(logoPath) ? readFileSync(logoPath, 'utf-8') : ''
 
-  const statusIcon = {
-    idle: '○',
-    loading: '◌',
-    done: '●',
-    error: '✗',
-  }[llmStatus]
+export function Header() {
+  const logoLines = logo.split('\n')
 
   return (
-    <Box justifyContent="space-between" marginBottom={1}>
-      <Text color="cyan" bold>Terminal Assistant</Text>
-      <Text color={statusColor}>{statusIcon}</Text>
+    <Box flexDirection="column" marginBottom={1}>
+      {logoLines.map((line, i) => (
+        <Text key={i} color="cyan" bold>{line}</Text>
+      ))}
     </Box>
   )
 }

@@ -46,14 +46,6 @@ export type LLMOutput =
   | NeedClarificationOutput 
   | ErrorOutput
 
-// 类型枚举
-export const LLMOutputTypes = {
-  TOOL_CALL: 'tool_call',
-  FINAL_ANSWER: 'final_answer',
-  NEED_CLARIFICATION: 'need_clarification',
-  ERROR: 'error',
-} as const
-
 // ===================== 解析结果类型 =====================
 
 export interface ParseSuccess {
@@ -357,9 +349,4 @@ export function parseLLMOutput(raw: string): ParseResult {
   }
 }
 
-/**
- * 生成格式化的 JSON 字符串
- */
-export function formatLLMOutput(output: LLMOutput): string {
-  return `<lccode_json>\n${JSON.stringify(output, null, 2)}\n</lccode_json>`
-}
+

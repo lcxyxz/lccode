@@ -9,6 +9,7 @@ import type { ChatMessage } from '../../services/types.js'
 
 export interface PromptContext {
   history: ChatMessage[]
+  summary?: string
 }
 
 
@@ -31,16 +32,6 @@ function formatHistory(history: ChatMessage[]): string {
     .join('\n')
 }
 
-/**
- * 检查对话历史中是否需要注入 execute_command 限制
- */
-function needsCommandRestrictions(history: ChatMessage[]): boolean {
-  const recentMessages = history.slice(-6)
-  const commandKeywords = ['查看', '执行', '运行', '检查', '搜索', '查找', '列出', '显示']
-  return recentMessages.some(msg =>
-    msg.role === 'user' && commandKeywords.some(kw => msg.content.includes(kw))
-  )
-}
 
 // ===================== 静态部分缓存 =====================
 
@@ -61,6 +52,7 @@ function buildStaticPrefix(registry: ToolRegistry): string {
 
   if (staticPromptPrefix === null) {
     const toolDescriptions = registry.formatToolDescriptions()
+    
     staticPromptPrefix = `你是智能助手，可调用工具完成任务。
 
 ## 可用工具
@@ -98,10 +90,11 @@ ${toolDescriptions}
 <lccode_json>
 {
   "type": "tool_call",
-  "thought": "用户想查看当前目录的文件，我需要执行 ls 命令",
-  "tool": "execute_command",
+  "thought": "用户想查看当前目录的文件",
+  "tool": "search",
   "params": {
-    "command": "ls -la"
+    "query": ".",
+    "type": "files"
   }
 }
 </lccode_json>
@@ -147,7 +140,7 @@ ${toolDescriptions}
   "tool": "write_file",
   "params": {
     "file_path": "example.py",
-    "content": "#!/usr/bin/env python3\\nprint('Hello World')"
+    "content": "python3\\nprint('Hello World')"
   }
 }
 </lccode_json>
@@ -168,69 +161,83 @@ ${toolDescriptions}
 7. 不要重复执行相同命令
 8. 使用中文回答
 
-## 上下文搜集策略（优先使用 grep）
+## 工具优先级规则
 
-**回答问题前，优先用 grep 搜集上下文！**
+**必须优先使用 file-tools 中的专用工具，而非 execute_command：**
 
-使用 \`execute_command\` 工具执行 grep 命令来搜索代码库，这是获取上下文的首选方式。
+| 任务 | 优先使用 | 而非 |
+|------|----------|------|
+| 搜索文件内容 | \`search\` (type="content") | \`execute_command\` + grep |
+| 搜索文件名 | \`search\` (type="files") | \`execute_command\` + find/dir |
+| 创建文件夹 | \`add_dir\` | \`execute_command\` + mkdir |
+| 读取文件 | \`read_file\` | \`execute_command\` + cat |
+| 写入文件 | \`write_file\` | \`execute_command\` + echo/tee |
+| 编辑文件 | \`edit_file\` | \`execute_command\` + sed |
 
-### 搜索示例
+只有当 file-tools 中的工具无法完成任务时，才使用 \`execute_command\`。
+
+## 上下文搜集策略（优先使用 search 工具）
+
+**回答问题前，优先用 search 工具搜集上下文！**
 
 **搜索函数定义或调用：**
 \`\`\`json
 {
   "type": "tool_call",
-  "thought": "用户想了解某个函数，先搜索它的定义和调用位置",
-  "tool": "execute_command",
+  "thought": "搜索函数的定义和调用位置",
+  "tool": "search",
   "params": {
-    "command": "grep -rn 'functionName' --include='*.ts'"
+    "query": "functionName",
+    "file_pattern": "*.ts"
   }
 }
 \`\`\`
 
-**搜索变量使用：**
+**在指定目录搜索：**
 \`\`\`json
 {
   "type": "tool_call",
-  "thought": "搜索变量名在哪些地方被使用",
-  "tool": "execute_command",
+  "thought": "在 src 目录下搜索相关代码",
+  "tool": "search",
   "params": {
-    "command": "grep -rn 'variableName' --include='*.ts' src/"
+    "query": "className",
+    "path": "src",
+    "file_pattern": "*.ts,*.tsx"
   }
 }
 \`\`\`
 
-**搜索错误信息：**
+**搜索文件名：**
 \`\`\`json
 {
   "type": "tool_call",
-  "thought": "查找这个错误信息的来源",
-  "tool": "execute_command",
+  "thought": "查找包含 config 的文件",
+  "tool": "search",
   "params": {
-    "command": "grep -rn 'Error message' --include='*.{ts,log}'"
+    "query": "config*",
+    "type": "files"
   }
 }
 \`\`\`
 
-**搜索类定义：**
+**创建文件夹：**
 \`\`\`json
 {
   "type": "tool_call",
-  "thought": "查找类的定义和实现",
-  "tool": "execute_command",
+  "thought": "需要创建新的目录结构",
+  "tool": "add_dir",
   "params": {
-    "command": "grep -rn 'class ClassName' --include='*.ts'"
+    "dir_path": "src/utils/helpers"
   }
 }
 \`\`\`
 
-### grep 使用策略
+### 搜索策略
 
-1. **回答代码问题前**：先用 \`grep -rn '关键词'\` 搜索相关代码
-2. **指定文件类型**：用 \`--include='*.ts'\` 限定搜索范围，提高效率
-3. **限定目录**：用 \`grep -rn 'pattern' src/\` 在特定目录下搜索
-4. **忽略大小写**：用 \`grep -rni 'pattern'\` 进行不区分大小写的搜索
-5. **多次搜索**：一次 grep 结果不够时，继续用不同关键词搜索，直到获得充分上下文
+1. **回答代码问题前**：先用 search 工具搜索相关代码
+2. **指定文件类型**：通过 file_pattern 限定搜索范围
+3. **限定目录**：通过 path 参数在特定目录下搜索
+4. **多次搜索**：一次搜索结果不够时，继续用不同关键词搜索
 
 `
   }
@@ -258,14 +265,13 @@ export function buildSystemPrompt(
   const prefix = buildStaticPrefix(registry)
   const suffix = buildStaticSuffix()
   const history = formatHistory(ctx.history)
-  const needsCommandLimit = needsCommandRestrictions(ctx.history)
+  const summarySection = ctx.summary ? `\n\n## 历史摘要\n\n${ctx.summary}\n` : ''
 
-  const commandLimit = needsCommandLimit ? `
+  return `${prefix}
+  
 ## execute_command 限制
-每次只执行一条命令，禁止 && || ; | 连接多条命令` : ''
-
-  return `${prefix}${commandLimit}
-
+每次只执行一条命令，禁止 && || ; | 连接多条命令
+${summarySection}
 ## 对话历史
 
 ${history}${suffix}`

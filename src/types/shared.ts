@@ -1,5 +1,15 @@
 /** 输出区块类型 */
-export type SectionType = 'message' | 'command' | 'thinking' | 'response' | 'code_preview'
+export type SectionType = 'message' | 'command' | 'thinking' | 'response' | 'diff_preview'
+
+/** 差异行类型 */
+export type DiffLineType = 'added' | 'removed' | 'unchanged'
+
+/** 差异行 */
+export interface DiffLine {
+  type: DiffLineType
+  lineNumber: number
+  content: string
+}
 
 /** 输出区块 */
 export interface OutputSection {
@@ -9,10 +19,10 @@ export interface OutputSection {
   content: string
   collapsed: boolean
   color?: 'green' | 'blue' | 'yellow' | 'cyan' | 'magenta' | 'white' | 'gray' | 'red'
-  codePreview?: {
+  diffPreview?: {
     filePath: string
     language: string
-    content: string
+    lines: DiffLine[]
   }
 }
 
