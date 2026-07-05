@@ -3,7 +3,7 @@ import type { OutputSection, DiffLine } from '../../types/index.js'
 
 export function useOutput() {
   const [sections, setSections] = useState<OutputSection[]>([
-    { id: 0, type: 'message', title: '', content: 'Welcome to lccode v0.1.0', collapsed: false, color: 'cyan' },
+    { id: 0, type: 'message', title: '', content: 'Welcome to lccode v0.0.2', collapsed: false, color: 'cyan' },
     { id: 1, type: 'message', title: '', content: 'Type "/help" to see available commands', collapsed: false, color: 'gray' },
   ])
 

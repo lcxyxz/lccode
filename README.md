@@ -43,18 +43,45 @@ AI 编辑文件后，实时展示修改差异对比：
 
 ## 快速开始
 
-### 安装依赖
+### 安装（推荐）
+
+通过 npm 全局安装：
 
 ```bash
+npm install -g @lcxyxz/lccode
+```
+
+安装完成后，在任意目录下直接运行：
+
+```bash
+lccode
+```
+
+### 从源码安装
+
+如果需要从源码安装，先克隆仓库然后构建：
+
+```bash
+git clone https://github.com/lcxyxz/lccode.git
+cd lccode
 npm install
+npm run build
+npm link
+```
+
+之后在任意目录下直接运行：
+
+```bash
+lccode
 ```
 
 ### 配置
 
-在用户家目录下创建 `.lccode.json` 配置文件：
+在用户家目录下创建配置文件 `~/.lccode/config.json`：
 
 ```bash
-cat > ~/.lccode.json << 'EOF'
+mkdir -p ~/.lccode
+cat > ~/.lccode/config.json << 'EOF'
 {
   "provider": "deepseek",
   "apiKey": "your-api-key",
@@ -62,6 +89,12 @@ cat > ~/.lccode.json << 'EOF'
 }
 EOF
 ```
+
+#### 配置优先级
+
+支持两级配置，项目级配置会覆盖用户级配置：
+- **用户级配置**：`~/.lccode/config.json`（全局生效）
+- **项目级配置**：`.lccode/config.json`（仅当前项目生效）
 
 #### 支持的 AI 服务提供商
 
@@ -120,22 +153,6 @@ cat > ~/.lccode/mcp.json << 'EOF'
 EOF
 ```
 
-
-### 全局安装（推荐）
-
-构建项目后，通过软链接注册全局命令：
-
-```bash
-npm run build
-npm link
-```
-
-之后在任意目录下直接运行：
-
-```bash
-lccode
-```
-
 ### 本地运行
 
 ```bash
@@ -183,7 +200,7 @@ lccode/
 │   │   ├── index.ts     # 提供商工厂
 │   │   └── types.ts     # 提供商接口
 │   ├── types/           # TypeScript 类型
-│   ├── config.ts        # 配置加载（读取 ~/.lccode.json）
+│   ├── config.ts        # 配置加载（读取 ~/.lccode/config.json）
 │   ├── app.tsx          # 主应用组件
 │   └── cli.tsx          # CLI 入口
 ├── test/                # 测试文件
@@ -217,7 +234,7 @@ lccode/
 
 **Q: 如何更换模型或 API Key？**
 
-编辑 `~/.lccode.json` 文件即可，修改后下次启动自动生效。
+编辑 `~/.lccode/config.json` 文件即可，修改后下次启动自动生效。
 
 **Q: MCP 工具如何使用？**
 

@@ -1,20 +1,49 @@
 {
-  "name": "ink-terminal-assistant",
+  "name": "@lcxyxz/lccode",
   "version": "0.0.2",
-  "description": "Mini terminal programming assistant built with Ink",
+  "description": "一款由桂电找不到工作的学生郁郁寡欢的情况下开发的一个agent助手",
+  "main": "./dist/app.js",
+  "types": "./dist/app.d.ts",
   "bin": {
     "lccode": "./dist/cli.js"
   },
   "type": "module",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "start": "tsx src/cli.tsx",
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "ai",
+    "cli",
+    "coding",
+    "assistant",
+    "deepseek",
+    "mimo",
+    "ink",
+    "mcp",
+    "terminal"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lcxyxz/lccode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lcxyxz/lccode/issues"
+  },
+  "homepage": "https://github.com/lcxyxz/lccode#readme",
+  "author": "lcxyxz",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "cli-highlight": "^2.1.11",
