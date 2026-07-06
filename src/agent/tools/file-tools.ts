@@ -1,77 +1,32 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, statSync, rmSync, readdirSync, type Dirent } from 'node:fs'
 import { dirname, extname, join, relative } from 'node:path'
+import { diffLines } from 'diff'
 import type { Tool, ToolResult, DiffLine } from './tool-registry.js'
 
 /**
  * 计算两段文本的差异
  */
 function computeDiff(oldText: string, newText: string): DiffLine[] {
-  const oldLines = oldText.split('\n')
-  const newLines = newText.split('\n')
+  const changes = diffLines(oldText, newText)
   const result: DiffLine[] = []
+  let oldLineNum = 1
+  let newLineNum = 1
 
-  // 简单的差异算法：逐行比较
-  const maxLen = Math.max(oldLines.length, newLines.length)
-  let oldIdx = 0
-  let newIdx = 0
+  for (const part of changes) {
+    const lines = part.value.split('\n')
+    if (lines[lines.length - 1] === '') lines.pop()
 
-  while (oldIdx < oldLines.length || newIdx < newLines.length) {
-    if (oldIdx >= oldLines.length) {
-      // 旧文本已结束，剩余都是新增
-      result.push({ type: 'added', lineNumber: newIdx + 1, content: newLines[newIdx] })
-      newIdx++
-    } else if (newIdx >= newLines.length) {
-      // 新文本已结束，剩余都是删除
-      result.push({ type: 'removed', lineNumber: oldIdx + 1, content: oldLines[oldIdx] })
-      oldIdx++
-    } else if (oldLines[oldIdx] === newLines[newIdx]) {
-      // 相同行
-      result.push({ type: 'unchanged', lineNumber: newIdx + 1, content: newLines[newIdx] })
-      oldIdx++
-      newIdx++
-    } else {
-      // 不同行，尝试向后查找匹配
-      let foundInNew = -1
-      let foundInOld = -1
-
-      // 在新文本中查找当前旧行
-      for (let i = newIdx; i < Math.min(newIdx + 5, newLines.length); i++) {
-        if (newLines[i] === oldLines[oldIdx]) {
-          foundInNew = i
-          break
-        }
-      }
-
-      // 在旧文本中查找当前新行
-      for (let i = oldIdx; i < Math.min(oldIdx + 5, oldLines.length); i++) {
-        if (oldLines[i] === newLines[newIdx]) {
-          foundInOld = i
-          break
-        }
-      }
-
-      if (foundInNew === -1 && foundInOld === -1) {
-        // 都没找到，视为替换
-        result.push({ type: 'removed', lineNumber: oldIdx + 1, content: oldLines[oldIdx] })
-        result.push({ type: 'added', lineNumber: newIdx + 1, content: newLines[newIdx] })
-        oldIdx++
-        newIdx++
-      } else if (foundInNew !== -1 && (foundInOld === -1 || foundInNew - newIdx <= foundInOld - oldIdx)) {
-        // 新文本中有匹配，说明旧文本中有删除
-        while (oldIdx < foundInOld || oldIdx < oldLines.length && oldLines[oldIdx] !== newLines[newIdx]) {
-          if (oldIdx < oldLines.length) {
-            result.push({ type: 'removed', lineNumber: oldIdx + 1, content: oldLines[oldIdx] })
-            oldIdx++
-          }
-        }
+    for (const line of lines) {
+      if (part.added) {
+        result.push({ type: 'added', lineNumber: newLineNum, content: line })
+        newLineNum++
+      } else if (part.removed) {
+        result.push({ type: 'removed', lineNumber: oldLineNum, content: line })
+        oldLineNum++
       } else {
-        // 旧文本中有匹配，说明新文本中有新增
-        while (newIdx < foundInNew || newIdx < newLines.length && newLines[newIdx] !== oldLines[oldIdx]) {
-          if (newIdx < newLines.length) {
-            result.push({ type: 'added', lineNumber: newIdx + 1, content: newLines[newIdx] })
-            newIdx++
-          }
-        }
+        result.push({ type: 'unchanged', lineNumber: newLineNum, content: line })
+        oldLineNum++
+        newLineNum++
       }
     }
   }

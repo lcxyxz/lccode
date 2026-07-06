@@ -47,6 +47,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "cli-highlight": "^2.1.11",
+    "diff": "^9.0.0",
     "ink": "^7.1.0",
     "ink-text-input": "^6.0.0",
     "marked": "9.0.3",

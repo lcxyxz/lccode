@@ -1,8 +1,6 @@
 /**
  * Agent 主逻辑
  */
- 
-import { writeFileSync } from 'node:fs'
 import { createProvider, type LLMProvider } from '../services/index.js'
 import type { ChatMessage } from '../services/types.js'
 import { ToolRegistry } from './tools/tool-registry.js'
@@ -165,7 +163,7 @@ ${failure.hint}
   }
 
   async *processInput(query: string): AsyncGenerator<AgentEvent> {
-    const maxRounds = 15
+    const maxRounds = 20
     const maxParseRetries = 2
     let round = 0
     let parseRetries = 0
@@ -341,6 +339,8 @@ ${failure.hint}
 
         this.chatHistory.push({ role: 'assistant', content: llmResult.response })
         this.chatHistory.push({ role: 'user', content: `[ToolExeInfo] ${resultMsg}` })
+
+        await this.checkAndSummarize()
       }
     }
 

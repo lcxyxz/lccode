@@ -1,4 +1,3 @@
-import React from 'react'
 import { parse, setOptions } from 'marked'
 import { Text } from 'ink'
 import TerminalRenderer from 'marked-terminal'
