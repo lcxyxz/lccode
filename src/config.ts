@@ -18,9 +18,8 @@ const USER_CONFIG_FILE = join(USER_CONFIG_DIR, 'config.json')
 const PROJECT_CONFIG_DIR = join(process.cwd(), '.lccode')
 const PROJECT_CONFIG_FILE = join(PROJECT_CONFIG_DIR, 'config.json')
 
-export const MEMORY_DIR = join(PROJECT_CONFIG_DIR, 'memory')
-export const MEMORY_SESSIONS_DIR = join(MEMORY_DIR, 'sessions')
-export const MEMORY_INDEX_FILE = join(MEMORY_DIR, 'index.md')
+const MEMORY_DIR = join(PROJECT_CONFIG_DIR, 'memory')
+const MEMORY_SESSIONS_DIR = join(MEMORY_DIR, 'sessions')
 
 const DEFAULT_CONFIG: LccodeConfig = {
   apiKey: '',

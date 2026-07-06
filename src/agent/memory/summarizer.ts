@@ -5,18 +5,7 @@
 
 import type { ChatMessage } from '../../services/types.js'
 import type { LLMProvider } from '../../services/types.js'
-
-const SUMMARIZE_SYSTEM_PROMPT = `你是一个对话摘要助手。请将以下对话历史压缩成简洁的摘要，保留关键信息：
-1. 用户的主要需求和目标
-2. 已经完成的操作和结果
-3. 当前正在进行的任务
-4. 重要的上下文信息（文件路径、变量名、错误信息等）
-
-要求：
-- 使用中文
-- 保持简洁，控制在 500 字以内
-- 保留关键技术细节
-- 不要包含无关的寒暄或重复内容`
+import { getSummarizePrompt } from '../prompts/loader.js'
 
 export class Summarizer {
   private provider: LLMProvider
@@ -63,7 +52,7 @@ export class Summarizer {
       .join('\n')
 
     const messagesForSummary: ChatMessage[] = [
-      { role: 'system', content: SUMMARIZE_SYSTEM_PROMPT },
+      { role: 'system', content: getSummarizePrompt() },
       { role: 'user', content: `请摘要以下对话：\n\n${formattedHistory}` },
     ]
 

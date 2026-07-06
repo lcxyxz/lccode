@@ -7,6 +7,7 @@ import { ToolRegistry } from './tools/tool-registry.js'
 import { executeCommandTool } from './tools/command-tool.js'
 import { readFileTool, writeFileTool, editFileTool, deleteFileTool, deleteDirectoryTool, searchTool, addDirTool } from './tools/file-tools.js'
 import { buildSystemPrompt } from './prompts/prompt-template.js'
+import { getRetryMessage, render } from './prompts/loader.js'
 import type { AgentConfig, AgentEvent } from '../types/index.js'
 import {
   parseLLMOutput,
@@ -152,14 +153,10 @@ export class Agent {
    * 构建解析失败的重试消息
    */
   private buildRetryMessage(failure: ParseFailure): string {
-    return `[系统提示] JSON 解析失败
-
-错误信息：${failure.error}
-
-修复提示：
-${failure.hint}
-
-请严格按照上述提示重新输出 JSON。`
+    return render(getRetryMessage(), {
+      error: failure.error,
+      hint: failure.hint,
+    })
   }
 
   async *processInput(query: string): AsyncGenerator<AgentEvent> {

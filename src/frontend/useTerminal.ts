@@ -250,8 +250,6 @@ export function useTerminal(onExit?: () => void) {
       callAgent(action.query)
     } else if (action.type === 'MCP_ACTION') {
       handleMcpAction(action.args)
-    } else if (action.type === 'CANCEL') {
-      cancelAgent()
     }
   }, [callAgent, cancelAgent])
 

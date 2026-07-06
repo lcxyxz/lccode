@@ -3,7 +3,7 @@ import type { CommandAction, OutputSection } from '../types/index.js'
 /**
  * 斜杠命令列表（用于命令提示）
  */
-export const SLASH_COMMANDS = ['/exit', '/help', '/clear', '/mcp', '/cancel']
+export const SLASH_COMMANDS = ['/exit', '/help', '/clear', '/mcp']
 
 /**
  * 内置命令的帮助文本和响应内容
@@ -14,7 +14,6 @@ export const COMMANDS: Record<string, string> = {
   /help    - Show this help message
   /clear   - clear screen
   /mcp     - Manage MCP tools
-  /cancel  - Cancel current conversation
   `,
 
 }
@@ -66,11 +65,6 @@ export function processCommand(cmd: string, ctx: CommandContext): CommandAction 
 
     if (slashCmd === 'mcp') {
       return { type: 'MCP_ACTION', args: parts.slice(1) }
-    }
-
-    if (slashCmd === 'cancel') {
-      ctx.addLine('对话已取消', 'yellow')
-      return { type: 'CANCEL' }
     }
 
     ctx.addLine(`bash: ${command}: command not found`, 'white')

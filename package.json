@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "start": "tsx src/cli.tsx",
-    "build": "tsc",
+    "build": "tsc && rm -rf dist/agent/prompts/templates && cp -r src/agent/prompts/templates dist/agent/prompts/",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
