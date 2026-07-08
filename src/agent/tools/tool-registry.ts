@@ -15,6 +15,41 @@ export interface Tool {
   description: string
   parameters: ToolParameter[]
   execute: (params: Record<string, any>) => Promise<ToolResult>
+  subAgentConfig?: SubAgentToolConfig
+}
+
+// ===================== 子 Agent 工具类型 =====================
+
+/** 子 Agent 输入参数 */
+export interface SubAgentInput {
+  task: string
+  context?: string
+  requirements?: string[]
+}
+
+/** 子 Agent 输出结果 */
+export interface SubAgentOutput {
+  success: boolean
+  result: any
+  summary?: string
+  artifacts?: SubAgentArtifact[]
+}
+
+/** 子 Agent 产物 */
+export interface SubAgentArtifact {
+  type: 'file' | 'code' | 'test' | 'review' | 'document'
+  name: string
+  content: string
+  metadata?: Record<string, any>
+}
+
+/** 子 Agent 工具配置 */
+export interface SubAgentToolConfig {
+  name: string
+  description: string
+  model?: string
+  maxTokens?: number
+  temperature?: number
 }
 
 /** 差异行类型 */
@@ -36,6 +71,7 @@ export interface ToolResult {
     language: string
     lines: DiffLine[]
   }
+  subAgentResult?: SubAgentOutput
 }
 
 /**
@@ -43,28 +79,14 @@ export interface ToolResult {
  */
 export class ToolRegistry {
   private tools: Map<string, Tool> = new Map()
-  private cachedDescriptions: string | null = null
-  private _version = 0
   private activeFilter: Set<string> | null = null
-
-  /** 版本号，每次工具变化时递增，用于 prompt 缓存失效判断 */
-  get version(): number {
-    return this._version
-  }
 
   register(tool: Tool): void {
     this.tools.set(tool.name, tool)
-    this.cachedDescriptions = null
-    this._version++
   }
 
   unregister(name: string): boolean {
-    const deleted = this.tools.delete(name)
-    if (deleted) {
-      this.cachedDescriptions = null
-      this._version++
-    }
-    return deleted
+    return this.tools.delete(name)
   }
 
   get(name: string): Tool | undefined {
@@ -81,8 +103,6 @@ export class ToolRegistry {
    */
   setActiveFilter(names: Set<string> | null): void {
     this.activeFilter = names
-    this.cachedDescriptions = null
-    this._version++
   }
 
   getActiveFilter(): Set<string> | null {
@@ -90,25 +110,22 @@ export class ToolRegistry {
   }
 
   /**
-   * 生成工具描述文本，用于注入提示词（带缓存）
+   * 生成工具描述文本，用于注入提示词
    * 内置工具始终显示，MCP 工具（mcp__ 前缀）按过滤器控制
    */
   formatToolDescriptions(): string {
-    if (this.cachedDescriptions === null) {
-      const tools = this.getAll().filter(t => {
-        if (this.activeFilter === null) return true
-        // 非 MCP 工具始终保留
-        if (!t.name.startsWith('mcp__')) return true
-        // MCP 工具按过滤器判断
-        return this.activeFilter!.has(t.name)
-      })
-      this.cachedDescriptions = tools.map(tool => {
-        const params = tool.parameters
-          .map(p => `    - ${p.name} (${p.type}${p.required ? ', 必填' : ', 可选'}): ${p.description}`)
-          .join('\n')
-        return `  - ${tool.name}: ${tool.description}\n${params}`
-      }).join('\n\n')
-    }
-    return this.cachedDescriptions
+    const tools = this.getAll().filter(t => {
+      if (this.activeFilter === null) return true
+      // 非 MCP 工具始终保留
+      if (!t.name.startsWith('mcp__')) return true
+      // MCP 工具按过滤器判断
+      return this.activeFilter!.has(t.name)
+    })
+    return tools.map(tool => {
+      const params = tool.parameters
+        .map(p => `    - ${p.name} (${p.type}${p.required ? ', 必填' : ', 可选'}): ${p.description}`)
+        .join('\n')
+      return `  - ${tool.name}: ${tool.description}\n${params}`
+    }).join('\n\n')
   }
 }

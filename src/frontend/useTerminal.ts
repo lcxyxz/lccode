@@ -22,7 +22,6 @@ export function useTerminal(onExit?: () => void) {
   const agentRef = useRef<Agent | null>(null)
   const inputRef = useRef('')
   const llmStatusRef = useRef<LLMStatus>('idle')
-  const confirmationPendingRef = useRef(false)
 
   inputRef.current = input
 
@@ -187,10 +186,6 @@ export function useTerminal(onExit?: () => void) {
             }
             actionsRef.current.addMessage(event.content ?? 'Unknown error', 'yellow')
             break
-          case 'confirmation_request':
-            confirmationPendingRef.current = true
-            actionsRef.current.addMessage(`⚠ 危险命令需要确认: ${event.content}\n输入 y 确认，其他任意键取消`, 'yellow')
-            break
           case 'token_usage':
             if (event.usage) {
               setTokenUsage((prev) => ({
@@ -222,19 +217,6 @@ export function useTerminal(onExit?: () => void) {
   const handleSubmit = useCallback((line: string) => {
     if (showSuggestionsRef.current) return
     if (!line.trim()) return
-
-    // 危险命令确认处理
-    if (confirmationPendingRef.current) {
-      confirmationPendingRef.current = false
-      const answer = line.trim().toLowerCase()
-      if (answer === 'y' || answer === 'yes') {
-        agentRef.current?.respondToConfirmation(true)
-      } else {
-        agentRef.current?.respondToConfirmation(false)
-      }
-      setInput('')
-      return
-    }
 
     const action = processCommand(line, {
       addLine: actionsRef.current.addMessage,

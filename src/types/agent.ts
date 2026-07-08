@@ -3,7 +3,7 @@ import type { ProviderType, DiffLine } from './shared.js'
 export type { ProviderType }
 
 export interface AgentEvent {
-  type: 'thinking' | 'command' | 'response' | 'error' | 'token_usage' | 'diff_preview' | 'confirmation_request'
+  type: 'thinking' | 'command' | 'response' | 'error' | 'token_usage' | 'diff_preview'
   content: string
   metadata?: {
     command?: string

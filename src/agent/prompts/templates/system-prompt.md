@@ -125,6 +125,30 @@
 
 每次只执行一条命令，禁止 && || ; | 连接多条命令
 
+## execute_command 安全规则
+
+**使用 `execute_command` 前必须判断命令是否危险。** 如果命令匹配以下任何模式，必须先用 `need_clarification` 向用户确认，得到用户明确同意后才能执行：
+
+| 危险模式 | 示例 |
+|----------|------|
+| `rm -rf` 递归删除 | `rm -rf ./dir`, `rm -rf /` |
+| `sudo rm` | `sudo rm file` |
+| `mkfs` 格式化磁盘 | `mkfs.ext4 /dev/sda` |
+| `dd if=` 底层写入 | `dd if=/dev/zero of=/dev/sda` |
+| `chmod 777` 全开权限 | `chmod 777 file` |
+| 文件重定向覆盖 | `echo x > file`, `echo x >> file` |
+| 管道给 shell 执行 | `cat file \| bash` |
+| Windows 危险命令 | `rmdir /s /q`, `del /f /q`, `format c:` |
+
+**不在白名单内的命令**（如 `mv`, `cp`, `kill`, `pkill`, `iptables` 等）也属于未知命令，执行前应向用户确认。
+
+**白名单内安全命令**（可直接执行）：`ls`, `pwd`, `cat`, `grep`, `find`, `head`, `tail`, `wc`, `echo`, `ps`, `df`, `du`, `free`, `uname`, `whoami`, `date`, `git`, `npm`, `npx`, `yarn`, `pnpm` 等。
+
+**判断流程：**
+1. 命令匹配危险模式 → 用 `need_clarification` 询问用户："该命令有风险（原因），是否确定执行？"
+2. 命令不在白名单内 → 用 `need_clarification` 询问用户："该命令不在安全列表中，是否确定执行？"
+3. 命令在白名单内且无危险模式 → 直接执行
+
 ## 上下文搜集策略（优先使用 search 工具）
 
 **回答问题前，优先用 search 工具搜集上下文！**

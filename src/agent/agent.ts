@@ -5,6 +5,7 @@ import { createProvider, type LLMProvider } from '../services/index.js'
 import type { ChatMessage } from '../services/types.js'
 import { ToolRegistry } from './tools/tool-registry.js'
 import { executeCommandTool } from './tools/command-tool.js'
+import { planTool } from './tools/agent-tool.js'
 import { readFileTool, writeFileTool, editFileTool, deleteFileTool, deleteDirectoryTool, searchTool, addDirTool } from './tools/file-tools.js'
 import { buildSystemPrompt } from './prompts/prompt-template.js'
 import { getRetryMessage, render } from './prompts/loader.js'
@@ -18,7 +19,6 @@ import {
   type ParseFailure
 } from '../types/llm-output.js'
 import { Logger, type LoggerConfig, LogLevel } from '../utils/logger.js'
-import { classifyCommand } from '../services/command-executor.js'
 import { McpManager } from './mcp/manager.js'
 import { Summarizer } from './memory/summarizer.js'
 
@@ -34,23 +34,17 @@ export class Agent {
   private currentQueryStartIndex = 0
   private logger: Logger
   private abortController: AbortController | null = null
-  private confirmationResolve: ((confirmed: boolean) => void) | null = null
+  private config: AgentConfig
 
   private constructor(config: AgentConfig, loggerConfig?: LoggerConfig) {
     this.provider = createProvider(config)
+    this.config = config
     this.registry = new ToolRegistry()
     this.mcpManager = new McpManager()
     this.summarizer = new Summarizer(this.provider)
     this.logger = new Logger(loggerConfig)
 
-    this.registry.register(executeCommandTool)
-    this.registry.register(readFileTool)
-    this.registry.register(writeFileTool)
-    this.registry.register(editFileTool)
-    this.registry.register(deleteFileTool)
-    this.registry.register(deleteDirectoryTool)
-    this.registry.register(searchTool)
-    this.registry.register(addDirTool)
+    this.registerTools(config)
 
     this.logger.clear()
     this.logger.info('Agent initialized')
@@ -71,29 +65,24 @@ export class Agent {
     return agent
   }
 
+  private registerTools(config: AgentConfig): void {
+    this.registry.register(executeCommandTool)
+    this.registry.register(readFileTool)
+    this.registry.register(writeFileTool)
+    this.registry.register(editFileTool)
+    this.registry.register(deleteFileTool)
+    this.registry.register(deleteDirectoryTool)
+    this.registry.register(searchTool)
+    this.registry.register(addDirTool)
+    this.registry.register(planTool(config))
+  }
+
   getToolRegistry(): ToolRegistry {
     return this.registry
   }
 
   getMcpManager(): McpManager {
     return this.mcpManager
-  }
-
-  /**
-   * 等待用户确认（用于危险命令）
-   */
-  private waitForConfirmation(): Promise<boolean> {
-    return new Promise(resolve => {
-      this.confirmationResolve = resolve
-    })
-  }
-
-  /**
-   * 回复确认结果（由前端调用）
-   */
-  respondToConfirmation(confirmed: boolean): void {
-    this.confirmationResolve?.(confirmed)
-    this.confirmationResolve = null
   }
 
   /** 刷新工具过滤器，将 McpManager 的启用状态同步到 ToolRegistry */
@@ -275,26 +264,6 @@ export class Agent {
           continue
         }
 
-        // 危险命令确认机制
-        if (output.tool === 'execute_command') {
-          const command = output.params?.command
-          if (command) {
-            const risk = classifyCommand(command)
-            if (risk !== 'safe') {
-              this.logger.debug(`Command requires confirmation: ${command} (risk: ${risk})`)
-              yield { type: 'confirmation_request', content: command }
-              const confirmed = await this.waitForConfirmation()
-              if (!confirmed) {
-                this.chatHistory.push({ role: 'assistant', content: llmResult.response })
-                this.chatHistory.push({ role: 'user', content: '[ToolExeInfo] 用户拒绝执行该命令' })
-                continue
-              }
-              // 用户已确认，强制执行
-              output.params._force = true
-            }
-          }
-        }
-
         const execResult = await tool.execute(output.params || {})
         this.logger.debug('Tool result:', JSON.stringify(execResult))
 
@@ -347,9 +316,6 @@ export class Agent {
   }
 
   cancel() {
-    // 取消待确认的命令
-    this.confirmationResolve?.(false)
-    this.confirmationResolve = null
     this.abortController?.abort()
   }
 
