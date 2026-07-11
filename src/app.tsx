@@ -5,6 +5,7 @@ import { Header } from './frontend/components/Header.js'
 import { OutputLines } from './frontend/components/OutputLines.js'
 import { InputLine } from './frontend/components/InputLine.js'
 import { CommandSuggestion } from './frontend/components/CommandSuggestion.js'
+import { FileSuggestion } from './frontend/components/FileSuggestion.js'
 import { StatusLine } from './frontend/components/StatusLine.js'
 
 class ErrorBoundary extends Component<
@@ -37,6 +38,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
   const {
     sections, input, llmStatus, tokenUsage, handleSubmit, handleChange, cancelAgent,
     showSuggestions, filteredCommands, selectedIndex,
+    showFileSuggestions, filteredFiles, fileSelectedIndex,
   } = useTerminal(onExit)
 
   return (
@@ -47,6 +49,9 @@ function AppContent({ onExit }: { onExit?: () => void }) {
       </Box>
       {showSuggestions && filteredCommands.length > 0 && (
         <CommandSuggestion commands={filteredCommands} selectedIndex={selectedIndex} />
+      )}
+      {showFileSuggestions && filteredFiles.length > 0 && (
+        <FileSuggestion files={filteredFiles} selectedIndex={fileSelectedIndex} />
       )}
       <InputLine
         value={input}
