@@ -83,7 +83,3 @@ export function loadConfig(): LccodeConfig | null {
     provider: merged.provider,
   }
 }
-
-export function getProjectConfigPath(): string | null {
-  return existsSync(PROJECT_CONFIG_FILE) ? PROJECT_CONFIG_FILE : null
-}

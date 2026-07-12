@@ -49,10 +49,6 @@ export class Logger {
     }
   }
 
-  getLogFile(): string {
-    return this.logFile
-  }
-
   private write(message: string): void {
     try {
       appendFileSync(this.logFile, message + '\n')

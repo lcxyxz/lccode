@@ -77,39 +77,6 @@ function isCommandSafe(command: string): { safe: boolean; reason?: string } {
 }
 
 /**
- * 命令风险等级
- * - safe: 白名单内且无危险模式，可直接执行
- * - dangerous: 匹配危险模式，需要用户确认
- * - unknown: 不在白名单内，需要用户确认
- */
-export type CommandRisk = 'safe' | 'dangerous' | 'unknown'
-
-/**
- * 对命令进行风险分类
- */
-export function classifyCommand(command: string): CommandRisk {
-  const trimmed = command.trim()
-
-  // 检查危险模式
-  for (const pattern of DANGEROUS_PATTERNS) {
-    if (pattern.test(trimmed)) {
-      return 'dangerous'
-    }
-  }
-
-  // 提取主命令
-  const parts = trimmed.split(/\s+/)
-  const mainCommand = parts[0].toLowerCase()
-
-  // 检查白名单
-  if (SAFE_COMMANDS.includes(mainCommand)) {
-    return 'safe'
-  }
-
-  return 'unknown'
-}
-
-/**
  * 获取当前平台信息
  */
 export function getPlatform(): 'linux' | 'windows' | 'darwin' {

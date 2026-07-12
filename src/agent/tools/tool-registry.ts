@@ -15,51 +15,6 @@ export interface Tool {
   description: string
   parameters: ToolParameter[]
   execute: (params: Record<string, any>) => Promise<ToolResult>
-  subAgentConfig?: SubAgentToolConfig
-}
-
-// ===================== 子 Agent 工具类型 =====================
-
-/** 子 Agent 输入参数 */
-export interface SubAgentInput {
-  task: string
-  context?: string
-  requirements?: string[]
-}
-
-/** 子 Agent 输出结果 */
-export interface SubAgentOutput {
-  success: boolean
-  result: any
-  summary?: string
-  artifacts?: SubAgentArtifact[]
-}
-
-/** 子 Agent 产物 */
-export interface SubAgentArtifact {
-  type: 'file' | 'code' | 'test' | 'review' | 'document'
-  name: string
-  content: string
-  metadata?: Record<string, any>
-}
-
-/** 子 Agent 工具配置 */
-export interface SubAgentToolConfig {
-  name: string
-  description: string
-  model?: string
-  maxTokens?: number
-  temperature?: number
-}
-
-/** 差异行类型 */
-export type DiffLineType = 'added' | 'removed' | 'unchanged'
-
-/** 差异行 */
-export interface DiffLine {
-  type: DiffLineType
-  lineNumber: number
-  content: string
 }
 
 export interface ToolResult {
@@ -71,7 +26,16 @@ export interface ToolResult {
     language: string
     lines: DiffLine[]
   }
-  subAgentResult?: SubAgentOutput
+}
+
+/** 差异行类型 */
+export type DiffLineType = 'added' | 'removed' | 'unchanged'
+
+/** 差异行 */
+export interface DiffLine {
+  type: DiffLineType
+  lineNumber: number
+  content: string
 }
 
 /**
