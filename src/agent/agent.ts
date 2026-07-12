@@ -30,7 +30,6 @@ export class Agent {
   private mcpManager: McpManager
   private summarizer: Summarizer
   private chatHistory: ChatMessage[] = []
-  private summaryThreshold = 10
   private currentQueryStartIndex = 0
   private logger: Logger
   private abortController: AbortController | null = null
@@ -115,9 +114,11 @@ export class Agent {
   }
 
   private async checkAndSummarize(): Promise<void> {
+    const summaryThreshold = this.config.summaryThreshold ?? 15
+    const keepRecent = this.config.keepRecent ?? 20
     const userMessageCount = this.chatHistory.filter(msg => msg.role === 'user').length
-    if (userMessageCount > this.summaryThreshold) {
-      this.logger.debug(`User messages (${userMessageCount}) exceed threshold (${this.summaryThreshold}), generating summary...`)
+    if (userMessageCount > summaryThreshold) {
+      this.logger.debug(`User messages (${userMessageCount}) exceed threshold (${summaryThreshold}), generating summary...`)
       
       // 对超过阈值的消息进行摘要
       const lastSummarizedIndex = this.summarizer.getLastSummarizedIndex()
@@ -127,7 +128,6 @@ export class Agent {
         await this.summarizer.summarize(messagesToSummarize)
         
         // 清除已摘要的消息，只保留最近的几轮对话
-        const keepRecent = 4 // 保留最近2轮对话（user+assistant各2条）
         if (this.chatHistory.length > keepRecent) {
           this.chatHistory = this.chatHistory.slice(-keepRecent)
           this.currentQueryStartIndex = 0
@@ -149,8 +149,8 @@ export class Agent {
   }
 
   async *processInput(query: string): AsyncGenerator<AgentEvent> {
-    const maxRounds = 20
-    const maxParseRetries = 2
+    const maxRounds = this.config.maxRounds ?? 40
+    const maxParseRetries = this.config.maxParseRetries ?? 5
     let round = 0
     let parseRetries = 0
     

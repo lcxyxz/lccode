@@ -11,6 +11,13 @@ export interface DiffLine {
   content: string
 }
 
+/** 命令结果 */
+export interface CommandEntry {
+  command: string
+  output: string
+  success: boolean
+}
+
 /** 输出区块 */
 export interface OutputSection {
   id: number
@@ -24,6 +31,8 @@ export interface OutputSection {
     language: string
     lines: DiffLine[]
   }
+  /** 关联的命令结果列表 */
+  commands?: CommandEntry[]
 }
 
 /** 命令处理后的动作指令 */

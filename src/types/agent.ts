@@ -27,4 +27,12 @@ export interface AgentConfig {
   baseUrl?: string
   model?: string
   provider?: ProviderType
+  /** 超过多少条 user 消息后触发摘要 */
+  summaryThreshold?: number
+  /** 摘要后保留最近几条消息 */
+  keepRecent?: number
+  /** 单次输入最多执行几轮工具调用 */
+  maxRounds?: number
+  /** 解析失败最多重试几次 */
+  maxParseRetries?: number
 }

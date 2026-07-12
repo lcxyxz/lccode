@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import type { OutputSection, DiffLine } from '../../types/index.js'
+import type { OutputSection, CommandEntry, DiffLine } from '../../types/index.js'
 
 export function useOutput() {
   const [sections, setSections] = useState<OutputSection[]>([
@@ -8,8 +8,8 @@ export function useOutput() {
   ])
 
   const idCounterRef = useRef(2)
-  const commandListIdRef = useRef<number | null>(null)
-  const commandEntriesRef = useRef<Array<{ command: string; success: boolean }>>([])
+  /** 当前正在构建的 response section id */
+  const currentResponseIdRef = useRef<number | null>(null)
 
   const addMessage = useCallback((content: string, color?: OutputSection['color']) => {
     const id = idCounterRef.current++
@@ -18,49 +18,47 @@ export function useOutput() {
     }])
   }, [])
 
-  const addCommandResult = useCallback((command: string, _output: string, success: boolean) => {
-    commandEntriesRef.current.push({ command, success })
-    const lines = commandEntriesRef.current
-      .map(e => `$ ${e.command}`)
-      .join('\n')
-    const allSuccess = commandEntriesRef.current.every(e => e.success)
+  const addCommandResult = useCallback((command: string, output: string, success: boolean) => {
+    const entry: CommandEntry = { command, output, success }
 
     setSections(prev => {
-      // 移除旧的命令列表 section
-      const filtered = commandListIdRef.current !== null
-        ? prev.filter(s => s.id !== commandListIdRef.current)
-        : prev
-      // 创建新的命令列表 section
-      const id = commandListIdRef.current ?? idCounterRef.current++
-      commandListIdRef.current = id
-      return [...filtered, {
-        id, type: 'command', title: '',
-        content: lines,
-        collapsed: false, color: allSuccess ? 'green' : 'red',
+      // 如果有当前正在构建的 response section，追加到其中
+      if (currentResponseIdRef.current !== null) {
+        return prev.map(s => {
+          if (s.id === currentResponseIdRef.current) {
+            return {
+              ...s,
+              commands: [...(s.commands ?? []), entry],
+            }
+          }
+          return s
+        })
+      }
+      // 否则创建一个临时的 command section
+      const id = idCounterRef.current++
+      return [...prev, {
+        id, type: 'command', title: '', content: '',
+        collapsed: false, color: success ? 'green' : 'red',
+        commands: [entry],
       }]
     })
   }, [])
 
   const addResponse = useCallback((content: string) => {
     const id = idCounterRef.current++
+    currentResponseIdRef.current = id
     setSections(prev => [...prev, {
       id, type: 'response', title: '', content: content ?? '', collapsed: false, color: 'white',
     }])
   }, [])
 
   const clearSections = useCallback(() => {
-    commandListIdRef.current = null
-    commandEntriesRef.current = []
+    currentResponseIdRef.current = null
     setSections([])
   }, [])
 
   const resetCommandList = useCallback(() => {
-    const oldId = commandListIdRef.current
-    commandListIdRef.current = null
-    commandEntriesRef.current = []
-    if (oldId !== null) {
-      setSections(prev => prev.filter(s => s.id !== oldId))
-    }
+    currentResponseIdRef.current = null
   }, [])
 
   const addDiffPreview = useCallback((filePath: string, language: string, lines: DiffLine[]) => {
