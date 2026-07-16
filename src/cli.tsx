@@ -35,8 +35,12 @@ if (existingConfig) {
   if (existingConfig.provider) process.env.LCCODE_PROVIDER = existingConfig.provider
 }
 
-const { waitUntilExit } = render(<Root onExit={() => setTimeout(() => process.exit(0), 50)} />, { exitOnCtrlC: false })
-
-waitUntilExit().then(() => {
-  process.exit(0)
+// process.on("exit") 同步清理：恢复终端状态
+process.on('exit', () => {
+  process.stdout.write('\x1b[?25h')  // 恢复光标可见
+  process.stdout.write('\x1b[0m')     // 重置颜色属性
 })
+
+const { waitUntilExit } = render(<Root onExit={() =>  process.exit(0)} />, { exitOnCtrlC: false })
+
+waitUntilExit()

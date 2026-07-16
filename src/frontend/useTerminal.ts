@@ -48,6 +48,9 @@ export function useTerminal(onExit?: () => void) {
   /** Token 使用统计（提示词 + 完成词 = 总计） */
   const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ promptTokens: 0, completionTokens: 0, totalTokens: 0 })
 
+  /** 是否正在退出（控制退出画面显示） */
+  const [isExiting, setIsExiting] = useState(false)
+
   // ==================== Ref 定义 ====================
   // 使用 Ref 避免 useCallback/useEffect 中的闭包问题
 
@@ -116,11 +119,17 @@ export function useTerminal(onExit?: () => void) {
 
   // ==================== 事件处理函数 ====================
 
-  /** 处理 Ctrl+C：显示告别消息并退出 */
-  const handleCtrlC = useCallback(() => {
-    actionsRef.current.addMessage('Goodbye!', 'cyan')
-    onExitRef.current?.()
+  /** 触发退出流程：设 isExiting → 断开 Agent → 延迟退出 */
+  const triggerExit = useCallback(() => {
+    setIsExiting(true)
+    // 异步断开 MCP 连接（不阻塞渲染）
+    agentRef.current?.disconnect?.()
   }, [])
+
+  /** 处理 Ctrl+C：触发退出 */
+  const handleCtrlC = useCallback(() => {
+    triggerExit()
+  }, [triggerExit])
 
   /** 取消当前正在进行的 LLM 对话 */
   const cancelAgent = useCallback(() => {
@@ -297,7 +306,7 @@ export function useTerminal(onExit?: () => void) {
 
     // 根据命令类型执行操作
     if (action.type === 'EXIT') {
-      onExitRef.current?.()
+      triggerExit()
     } else if (action.type === 'LLM_QUERY') {
       callAgent(action.query)
     } else if (action.type === 'MCP_ACTION') {
@@ -376,6 +385,19 @@ export function useTerminal(onExit?: () => void) {
   useEffect(() => { slashRef.current.updateInput(input) }, [input])
   useEffect(() => { fileRef.current.updateInput(input) }, [input])
 
+  // ==================== 退出逻辑 ====================
+
+  /** isExiting 变为 true 后，等待 Ink 渲染退出画面，然后调用 onExit 回调 */
+  useEffect(() => {
+    if (isExiting) {
+      // 给 Ink 一帧时间渲染退出画面，然后触发退出回调
+      const timer = setTimeout(() => {
+        onExitRef.current?.()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isExiting])
+
   // ==================== 返回值 ====================
 
   return {
@@ -391,6 +413,9 @@ export function useTerminal(onExit?: () => void) {
     llmStatus,       // LLM 状态（idle/loading/done/error）
     tokenUsage,      // Token 使用统计
     cancelAgent,     // 取消对话函数
+
+    // 退出相关
+    isExiting,       // 是否正在退出
 
     // 斜杠命令相关
     showSuggestions: slash.showSuggestions,     // 是否显示斜杠命令建议

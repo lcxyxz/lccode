@@ -7,6 +7,7 @@ import { InputLine } from './frontend/components/InputLine.js'
 import { CommandSuggestion } from './frontend/components/CommandSuggestion.js'
 import { FileSuggestion } from './frontend/components/FileSuggestion.js'
 import { StatusLine } from './frontend/components/StatusLine.js'
+import { ExitScreen } from './frontend/components/ExitScreen.js'
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -39,7 +40,12 @@ function AppContent({ onExit }: { onExit?: () => void }) {
     sections, input, llmStatus, tokenUsage, handleSubmit, handleChange, cancelAgent,
     showSuggestions, filteredCommands, selectedIndex,
     showFileSuggestions, filteredFiles, fileSelectedIndex,
+    isExiting,
   } = useTerminal(onExit)
+
+  if (isExiting) {
+    return <ExitScreen tokenUsage={tokenUsage} />
+  }
 
   return (
     <Box flexDirection="column" height="100%">
