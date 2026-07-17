@@ -4,7 +4,7 @@ import { Header } from './Header.js'
 
 export function ExitScreen({ tokenUsage }: { tokenUsage: TokenUsage }) {
   return (
-    <Box flexDirection="column" height="100%">
+    <Box flexDirection="column">
       <Header />
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
         <Box flexDirection="column" alignItems="center" gap={1}>
