@@ -7,6 +7,7 @@ import { InputLine } from './frontend/components/InputLine.js'
 import { CommandSuggestion } from './frontend/components/CommandSuggestion.js'
 import { FileSuggestion } from './frontend/components/FileSuggestion.js'
 import { StatusLine } from './frontend/components/StatusLine.js'
+import { InfoLine } from './frontend/components/InfoLine.js'
 import { ExitScreen } from './frontend/components/ExitScreen.js'
 
 class ErrorBoundary extends Component<
@@ -67,6 +68,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
         llmStatus={llmStatus}
       />
       <StatusLine llmStatus={llmStatus} modelName={process.env.LCCODE_MODEL || 'AI'} tokenUsage={tokenUsage} />
+      <InfoLine />
     </Box>
   )
 }
