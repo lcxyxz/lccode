@@ -7,8 +7,13 @@ import { render } from 'ink'
 import { ConfigSetup } from './frontend/components/ConfigSetup.js'
 import App from './app.js'
 
-function Root({ onExit }: { onExit?: () => void }) {
-  const [config, setConfig] = useState<LccodeConfig | null>(() => loadConfig())
+interface RootProps {
+  initialConfig: LccodeConfig | null;
+  onExit?: () => void;
+}
+
+function Root({ initialConfig, onExit }: RootProps) {
+  const [config, setConfig] = useState<LccodeConfig | null>(initialConfig)
 
   const handleConfigComplete = (apiKey: string, model: string, provider: ProviderType, baseUrl?: string) => {
     process.env.LCCODE_API_KEY = apiKey
@@ -41,6 +46,6 @@ process.on('exit', () => {
   process.stdout.write('\x1b[0m')     // 重置颜色属性
 })
 
-const { waitUntilExit } = render(<Root onExit={() =>  process.exit(0)} />, { exitOnCtrlC: false })
+const { waitUntilExit } = render(<Root initialConfig={existingConfig} onExit={() =>  process.exit(0)} />, { exitOnCtrlC: false })
 
 waitUntilExit()
