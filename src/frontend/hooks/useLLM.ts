@@ -8,6 +8,7 @@ interface LLMOutputActions {
   addResponse: (content: string) => void
   addDiffPreview: (filePath: string, language: string, lines: any[]) => void
   resetCommandList: () => void
+  onGitCommand?: () => void
 }
 
 export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutputActions) {
@@ -39,6 +40,10 @@ export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutp
             break
           case 'command':
             if (event.metadata) {
+              const cmd = event.metadata.command ?? ''
+              if (/git\s+(checkout|switch|branch)\b/.test(cmd)) {
+                actionsRef.current.onGitCommand?.()
+              }
               actionsRef.current.addCommandResult(
                 event.metadata.command ?? '',
                 event.metadata.commandOutput ?? '',

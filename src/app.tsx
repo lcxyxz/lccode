@@ -41,7 +41,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
     sections, input, llmStatus, tokenUsage, handleSubmit, handleChange, cancelAgent,
     showSuggestions, filteredCommands, selectedIndex,
     showFileSuggestions, filteredFiles, fileSelectedIndex,
-    isExiting,
+    isExiting,branchVersion,
   } = useTerminal(onExit)
 
   if (isExiting) {
@@ -68,7 +68,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
         llmStatus={llmStatus}
       />
       <StatusLine llmStatus={llmStatus} modelName={process.env.LCCODE_MODEL || 'AI'} tokenUsage={tokenUsage} />
-      <InfoLine />
+      <InfoLine branchVersion={branchVersion} />
     </Box>
   )
 }

@@ -44,6 +44,9 @@ export function useTerminal(onExit?: () => void) {
   /** 当前输入框的内容 */
   const [input, setInput] = useState('')
 
+  /** Git 分支版本号，用于触发 InfoLine 刷新 */
+  const [branchVersion, setBranchVersion] = useState(0)
+
   // ==================== Ref 定义 ====================
   // 使用 Ref 避免 useCallback/useEffect 中的闭包问题
 
@@ -66,6 +69,7 @@ export function useTerminal(onExit?: () => void) {
     addResponse: (c) => actionsRef.current.addResponse(c),
     addDiffPreview: (fp, lang, lines) => actionsRef.current.addDiffPreview(fp, lang, lines),
     resetCommandList: () => actionsRef.current.resetCommandList(),
+    onGitCommand: () => setBranchVersion(v => v + 1),
   })
 
   /** MCP 命令处理 */
@@ -225,6 +229,9 @@ export function useTerminal(onExit?: () => void) {
 
     // 退出相关
     isExiting,       // 是否正在退出
+
+    // Git 相关
+    branchVersion,   // Git 分支版本号
 
     // 斜杠命令相关
     showSuggestions: slash.showSuggestions,     // 是否显示斜杠命令建议
