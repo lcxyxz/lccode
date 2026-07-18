@@ -6,6 +6,7 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import { platform } from 'node:os'
+import { validateCommand, getWorkspaceRoot } from '../utils/sandbox.js'
 
 const execAsync = promisify(exec)
 
@@ -93,6 +94,18 @@ export function getPlatform(): 'linux' | 'windows' | 'darwin' {
  */
 export async function executeCommand(command: string, force: boolean = false): Promise<CommandResult> {
   if (!force) {
+    // 沙箱验证：拦截敏感操作
+    const sandboxCheck = validateCommand(command)
+    if (!sandboxCheck.safe) {
+      return {
+        success: false,
+        command,
+        stdout: '',
+        stderr: '',
+        error: `沙箱拦截: ${sandboxCheck.error}`,
+      }
+    }
+
     const safety = isCommandSafe(command)
     if (!safety.safe) {
       return {
@@ -108,11 +121,11 @@ export async function executeCommand(command: string, force: boolean = false): P
   try {
     // Windows 下使用 cmd.exe /c 执行命令
     const execCommand = isWindows ? `cmd.exe /c ${command}` : command
-    
+
     const { stdout, stderr } = await execAsync(execCommand, {
       timeout: 10000, // 10 秒超时
       maxBuffer: 1024 * 1024, // 1MB 输出限制
-      cwd: process.cwd(),
+      cwd: getWorkspaceRoot(), // 强制使用工作区目录
     })
 
     return {

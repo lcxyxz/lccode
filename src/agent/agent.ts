@@ -7,6 +7,7 @@ import { ToolRegistry } from './tools/tool-registry.js'
 import { executeCommandTool } from './tools/command-tool.js'
 import { planTool } from './tools/agent-tool.js'
 import { readFileTool, writeFileTool, editFileTool, deleteFileTool, deleteDirectoryTool, searchTool, addDirTool } from './tools/file-tools.js'
+import { sandboxTool } from './tools/sandbox-tool.js'
 import { buildSystemPrompt } from './prompts/prompt-template.js'
 import { getRetryMessage, render } from './prompts/loader.js'
 import type { AgentConfig, AgentEvent } from '../types/index.js'
@@ -87,6 +88,7 @@ export class Agent {
     this.registry.register(searchTool)
     this.registry.register(addDirTool)
     this.registry.register(planTool(config))
+    this.registry.register(sandboxTool)
   }
 
   getToolRegistry(): ToolRegistry {

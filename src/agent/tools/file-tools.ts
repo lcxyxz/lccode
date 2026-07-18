@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, statSyn
 import { dirname, extname, join, relative } from 'node:path'
 import { diffLines } from 'diff'
 import type { Tool, ToolResult, DiffLine } from './tool-registry.js'
+import { validatePath, getWorkspaceRoot } from '../../utils/sandbox.js'
 
 /**
  * 计算两段文本的差异
@@ -91,11 +92,18 @@ export const readFileTool: Tool = {
   execute: async (params): Promise<ToolResult> => {
     try {
       const filePath = params.file_path
-      if (!existsSync(filePath)) {
+
+      // 路径验证：防止越界访问
+      const validation = validatePath(filePath)
+      if (!validation.valid) {
+        return { success: false, output: '', error: validation.error }
+      }
+
+      if (!existsSync(validation.resolved!)) {
         return { success: false, output: '', error: `文件不存在: ${filePath}` }
       }
 
-      const content = readFileSync(filePath, 'utf-8')
+      const content = readFileSync(validation.resolved!, 'utf-8')
       const lines = content.split('\n')
 
       const start = params.start_line ? Math.max(1, Number(params.start_line)) : 1
@@ -135,13 +143,19 @@ export const writeFileTool: Tool = {
       const filePath = params.file_path
       const content = params.content
 
+      // 路径验证：防止越界访问
+      const validation = validatePath(filePath)
+      if (!validation.valid) {
+        return { success: false, output: '', error: validation.error }
+      }
+
       // 自动创建父目录
-      const dir = dirname(filePath)
+      const dir = dirname(validation.resolved!)
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true })
       }
 
-      writeFileSync(filePath, content, 'utf-8')
+      writeFileSync(validation.resolved!, content, 'utf-8')
       return { success: true, output: `已写入文件: ${filePath} (${content.length} 字节)` }
     } catch (error: any) {
       return { success: false, output: '', error: `写入失败: ${error.message}` }
@@ -165,11 +179,18 @@ export const editFileTool: Tool = {
   execute: async (params): Promise<ToolResult> => {
     try {
       const filePath = params.file_path
-      if (!existsSync(filePath)) {
+
+      // 路径验证：防止越界访问
+      const validation = validatePath(filePath)
+      if (!validation.valid) {
+        return { success: false, output: '', error: validation.error }
+      }
+
+      if (!existsSync(validation.resolved!)) {
         return { success: false, output: '', error: `文件不存在: ${filePath}` }
       }
 
-      const content = readFileSync(filePath, 'utf-8')
+      const content = readFileSync(validation.resolved!, 'utf-8')
       const lines = content.split('\n')
       const language = getLanguageFromPath(filePath)
 
@@ -189,7 +210,7 @@ export const editFileTool: Tool = {
         const oldSection = lines.slice(start - 1, end).join('\n')
         const newLines = params.new_text.split('\n')
         lines.splice(start - 1, end - start + 1, ...newLines)
-        writeFileSync(filePath, lines.join('\n'), 'utf-8')
+        writeFileSync(validation.resolved!, lines.join('\n'), 'utf-8')
 
         const diffLines = computeDiff(oldSection, params.new_text)
 
@@ -215,7 +236,7 @@ export const editFileTool: Tool = {
         }
 
         const newContent = content.replace(params.old_text, params.new_text)
-        writeFileSync(filePath, newContent, 'utf-8')
+        writeFileSync(validation.resolved!, newContent, 'utf-8')
 
         const diffLines = computeDiff(params.old_text, params.new_text)
 
@@ -254,16 +275,22 @@ export const deleteFileTool: Tool = {
     try {
       const filePath = params.file_path
 
-      if (!existsSync(filePath)) {
+      // 路径验证：防止越界访问
+      const validation = validatePath(filePath)
+      if (!validation.valid) {
+        return { success: false, output: '', error: validation.error }
+      }
+
+      if (!existsSync(validation.resolved!)) {
         return { success: false, output: '', error: `文件不存在: ${filePath}` }
       }
 
-      const stat = statSync(filePath)
+      const stat = statSync(validation.resolved!)
       if (stat.isDirectory()) {
         return { success: false, output: '', error: `这是一个目录，不能用 delete_file 删除: ${filePath}` }
       }
 
-      unlinkSync(filePath)
+      unlinkSync(validation.resolved!)
       return { success: true, output: `已删除文件: ${filePath}` }
     } catch (error: any) {
       return { success: false, output: '', error: `删除失败: ${error.message}` }
@@ -284,16 +311,22 @@ export const deleteDirectoryTool: Tool = {
     try {
       const dirPath = params.dir_path
 
-      if (!existsSync(dirPath)) {
+      // 路径验证：防止越界访问
+      const validation = validatePath(dirPath)
+      if (!validation.valid) {
+        return { success: false, output: '', error: validation.error }
+      }
+
+      if (!existsSync(validation.resolved!)) {
         return { success: false, output: '', error: `文件夹不存在: ${dirPath}` }
       }
 
-      const stat = statSync(dirPath)
+      const stat = statSync(validation.resolved!)
       if (!stat.isDirectory()) {
         return { success: false, output: '', error: `这是一个文件，不能用 delete_directory 删除: ${dirPath}` }
       }
 
-      rmSync(dirPath, { recursive: true, force: true })
+      rmSync(validation.resolved!, { recursive: true, force: true })
       return { success: true, output: `已删除文件夹: ${dirPath}` }
     } catch (error: any) {
       return { success: false, output: '', error: `删除失败: ${error.message}` }
@@ -431,9 +464,15 @@ export const searchTool: Tool = {
       const searchPath = params.path || '.'
       const filePattern = params.file_pattern
       const searchType = params.type || 'content'
-      const cwd = process.cwd()
+      const cwd = getWorkspaceRoot()
 
-      if (!existsSync(searchPath)) {
+      // 路径验证：防止越界访问
+      const validation = validatePath(searchPath)
+      if (!validation.valid) {
+        return { success: false, output: '', error: validation.error }
+      }
+
+      if (!existsSync(validation.resolved!)) {
         return { success: false, output: '', error: `路径不存在: ${searchPath}` }
       }
 
@@ -441,7 +480,7 @@ export const searchTool: Tool = {
 
       if (searchType === 'files') {
         // 文件名搜索
-        searchFiles(searchPath, query, results, 200, cwd)
+        searchFiles(validation.resolved!, query, results, 200, cwd)
         const output = results.length > 0
           ? `找到 ${results.length} 个文件：\n${results.join('\n')}`
           : '未找到匹配的文件'
@@ -454,10 +493,10 @@ export const searchTool: Tool = {
 
       if (patterns && patterns.length > 1) {
         for (const pat of patterns) {
-          searchContent(searchPath, query, pat, results, 500, cwd)
+          searchContent(validation.resolved!, query, pat, results, 500, cwd)
         }
       } else {
-        searchContent(searchPath, query, filePattern, results, 500, cwd)
+        searchContent(validation.resolved!, query, filePattern, results, 500, cwd)
       }
 
       const output = results.length > 0
@@ -485,15 +524,21 @@ export const addDirTool: Tool = {
       const dirPath = params.dir_path
       const recursive = params.recursive !== false
 
-      if (existsSync(dirPath)) {
-        const stat = statSync(dirPath)
+      // 路径验证：防止越界访问
+      const validation = validatePath(dirPath)
+      if (!validation.valid) {
+        return { success: false, output: '', error: validation.error }
+      }
+
+      if (existsSync(validation.resolved!)) {
+        const stat = statSync(validation.resolved!)
         if (stat.isDirectory()) {
           return { success: true, output: `文件夹已存在: ${dirPath}` }
         }
         return { success: false, output: '', error: `路径已存在但不是文件夹: ${dirPath}` }
       }
 
-      mkdirSync(dirPath, { recursive })
+      mkdirSync(validation.resolved!, { recursive })
       return { success: true, output: `已创建文件夹: ${dirPath}` }
     } catch (error: any) {
       return { success: false, output: '', error: `创建文件夹失败: ${error.message}` }
