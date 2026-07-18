@@ -64,7 +64,7 @@ export function useTerminal(onExit?: () => void) {
   actionsRef.current = { addMessage, addCommandResult, addResponse, addDiffPreview, addHistory, clearSections, resetCommandList }
 
   /** LLM 通信 */
-  const { callAgent, llmStatus, tokenUsage } = useLLM(agentRef, {
+  const { callAgent, llmStatus, tokenUsage, tokenUsageRef } = useLLM(agentRef, {
     addMessage: (c, color) => actionsRef.current.addMessage(c, color as any),
     addCommandResult: (cmd, out, ok) => actionsRef.current.addCommandResult(cmd, out, ok),
     addResponse: (c) => actionsRef.current.addResponse(c),
@@ -232,7 +232,8 @@ export function useTerminal(onExit?: () => void) {
 
     // LLM 相关
     llmStatus,       // LLM 状态（idle/loading/done/error）
-    tokenUsage,      // Token 使用统计
+    tokenUsage,      // Token 使用统计（State，用于正常 UI 显示）
+    tokenUsageRef,   // Token 使用统计（Ref，用于退出时获取最新值）
     cancelAgent,     // 取消对话函数
 
     // 退出相关
