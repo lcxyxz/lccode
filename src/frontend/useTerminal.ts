@@ -233,7 +233,6 @@ export function useTerminal(onExit?: () => void) {
     // LLM 相关
     llmStatus,       // LLM 状态（idle/loading/done/error）
     tokenUsage,      // Token 使用统计（State，用于正常 UI 显示）
-    tokenUsageRef,   // Token 使用统计（Ref，用于退出时获取最新值）
     cancelAgent,     // 取消对话函数
 
     // 退出相关

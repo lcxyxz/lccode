@@ -38,15 +38,14 @@ class ErrorBoundary extends Component<
 
 function AppContent({ onExit }: { onExit?: () => void }) {
   const {
-    sections, input, llmStatus, tokenUsage, tokenUsageRef, handleSubmit, handleChange, cancelAgent,
+    sections, input, llmStatus, tokenUsage, handleSubmit, handleChange, cancelAgent,
     showSuggestions, filteredCommands, selectedIndex,
     showFileSuggestions, filteredFiles, fileSelectedIndex,
     isExiting, branchVersion,
   } = useTerminal(onExit)
 
   if (isExiting) {
-    // 使用 Ref 获取最新的 token 使用量，避免异步更新导致的延迟
-    return <ExitScreen tokenUsage={tokenUsageRef.current} />
+    return <ExitScreen />
   }
 
   return (
