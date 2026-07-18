@@ -214,6 +214,8 @@
 
 {{summarySection}}
 
+{{skillSection}}
+
 ## 对话历史
 
 {{history}}

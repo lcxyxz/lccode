@@ -21,6 +21,8 @@ import {
 import { Logger, type LoggerConfig, LogLevel } from '../utils/logger.js'
 import { McpManager } from './mcp/manager.js'
 import { Summarizer } from './memory/summarizer.js'
+import { SkillManager } from './skill/skill-manager.js'
+import { createSkillTool } from './skill/skill-tool.js'
 
 // ===================== Agent 类 =====================
 
@@ -29,6 +31,7 @@ export class Agent {
   private registry: ToolRegistry
   private mcpManager: McpManager
   private summarizer: Summarizer
+  private skillManager: SkillManager
   private chatHistory: ChatMessage[] = []
   private currentQueryStartIndex = 0
   private logger: Logger
@@ -41,6 +44,7 @@ export class Agent {
     this.registry = new ToolRegistry()
     this.mcpManager = new McpManager()
     this.summarizer = new Summarizer(this.provider)
+    this.skillManager = new SkillManager()
     this.logger = new Logger(loggerConfig)
 
     this.registerTools(config)
@@ -61,6 +65,13 @@ export class Agent {
       agent.logger.error('Failed to load MCP config:', error)
     }
 
+    try {
+      await agent.skillManager.loadFromDisk()
+      agent.logger.info(`Skills loaded: ${agent.skillManager.count}`)
+    } catch (error) {
+      agent.logger.error('Failed to load skills:', error)
+    }
+
     return agent
   }
 
@@ -74,6 +85,7 @@ export class Agent {
     this.registry.register(searchTool)
     this.registry.register(addDirTool)
     this.registry.register(planTool(config))
+    this.registry.register(createSkillTool(this.skillManager))
   }
 
   getToolRegistry(): ToolRegistry {
@@ -82,6 +94,10 @@ export class Agent {
 
   getMcpManager(): McpManager {
     return this.mcpManager
+  }
+
+  getSkillManager(): SkillManager {
+    return this.skillManager
   }
 
   /** 刷新工具过滤器，将 McpManager 的启用状态同步到 ToolRegistry */
@@ -93,9 +109,11 @@ export class Agent {
   private buildMessages(): ChatMessage[] {
     const currentMessages = this.chatHistory.slice(this.currentQueryStartIndex)
     const summary = this.summarizer.getSummary()
+    const activeSkill = this.skillManager.getActive()
     const systemPrompt = buildSystemPrompt(this.registry, {
       history: this.chatHistory,
       summary,
+      skillContent: activeSkill?.content,
     })
     
     const messages: ChatMessage[] = [

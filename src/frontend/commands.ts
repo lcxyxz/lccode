@@ -3,7 +3,7 @@ import type { CommandAction, OutputSection } from '../types/index.js'
 /**
  * 斜杠命令列表（用于命令提示）
  */
-export const SLASH_COMMANDS = ['/exit', '/help', '/clear', '/mcp']
+export const SLASH_COMMANDS = ['/exit', '/help', '/clear', '/mcp', '/skill']
 
 /**
  * 内置命令的帮助文本和响应内容
@@ -65,6 +65,10 @@ export function processCommand(cmd: string, ctx: CommandContext): CommandAction 
 
     if (slashCmd === 'mcp') {
       return { type: 'MCP_ACTION', args: parts.slice(1) }
+    }
+
+    if (slashCmd === 'skill') {
+      return { type: 'SKILL_ACTION', args: parts.slice(1) }
     }
 
     ctx.addLine(`bash: ${command}: command not found`, 'white')

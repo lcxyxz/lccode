@@ -8,6 +8,7 @@ import { useExit } from './hooks/useExit.js'
 import { useAgent } from './hooks/useAgent.js'
 import { useLLM } from './hooks/useLLM.js'
 import { useMcpCommand } from './hooks/useMcpCommand.js'
+import { useSkillCommand } from './hooks/useSkillCommand.js'
 import { processCommand } from './commands.js'
 import type { LLMStatus } from '../types/index.js'
 
@@ -77,6 +78,11 @@ export function useTerminal(onExit?: () => void) {
     addMessage: (c, color) => actionsRef.current.addMessage(c, color as any),
   })
 
+  /** Skill 命令处理 */
+  const { handleSkillAction } = useSkillCommand(agentRef, {
+    addMessage: (c, color) => actionsRef.current.addMessage(c, color as any),
+  })
+
   /** 输入框内容的 Ref，用于在 useInput 回调中访问最新值 */
   const inputRef = useRef('')
 
@@ -137,8 +143,10 @@ export function useTerminal(onExit?: () => void) {
       callAgent(action.query)
     } else if (action.type === 'MCP_ACTION') {
       handleMcpAction(action.args)
+    } else if (action.type === 'SKILL_ACTION') {
+      handleSkillAction(action.args)
     }
-  }, [callAgent, handleMcpAction])
+  }, [callAgent, handleMcpAction, handleSkillAction])
 
   /** 输入框内容变化处理 */
   const handleChange = useCallback((value: string) => { setInput(value) }, [])
