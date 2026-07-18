@@ -10,6 +10,7 @@ export function ExitScreen() {
           <Text color="cyan" bold>Goodbye!</Text>
           <Text color="gray">Thanks for using lccode</Text>
         </Box>
+        <Box  width={4} height={2}></Box>
       </Box>
     </Box>
   )

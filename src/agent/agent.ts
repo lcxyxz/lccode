@@ -342,6 +342,8 @@ export class Agent {
 
   clearHistory() {
     this.chatHistory = []
+    this.currentQueryStartIndex = 0
+    this.summarizer.reset()
   }
 
   async disconnect(): Promise<void> {

@@ -3,7 +3,7 @@ import type { CommandAction, OutputSection } from '../types/index.js'
 /**
  * 斜杠命令列表（用于命令提示）
  */
-export const SLASH_COMMANDS = ['/exit', '/help', '/clear', '/mcp', '/skill']
+export const SLASH_COMMANDS = ['/exit', '/help', '/new', '/mcp', '/skill']
 
 /**
  * 内置命令的帮助文本和响应内容
@@ -12,7 +12,7 @@ export const COMMANDS: Record<string, string> = {
   help: `Available commands:
   /exit    - Exit the terminal
   /help    - Show this help message
-  /clear   - Clear screen
+  /new     - Start a new conversation
   /mcp     - Manage MCP tools
   /skill   - Manage skills
   `,
@@ -59,9 +59,9 @@ export function processCommand(cmd: string, ctx: CommandContext): CommandAction 
       return { type: 'CONTINUE' }
     }
 
-    if(slashCmd === "clear") {
+    if(slashCmd === "new") {
       ctx.clearSections()
-      return {type:'CONTINUE'}
+      return {type:'NEW_CONVERSATION'}
     }
 
     if (slashCmd === 'mcp') {

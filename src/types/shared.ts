@@ -42,6 +42,7 @@ export type CommandAction =
   | { type: 'LLM_QUERY'; query: string }
   | { type: 'MCP_ACTION'; args: string[] }
   | { type: 'SKILL_ACTION'; args: string[] }
+  | { type: 'NEW_CONVERSATION' }
 
 /** LLM 请求状态 */
 export type LLMStatus = 'idle' | 'loading' | 'done' | 'error'

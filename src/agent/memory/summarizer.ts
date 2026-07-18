@@ -16,6 +16,11 @@ export class Summarizer {
     this.provider = provider
   }
 
+  reset(): void {
+    this.summaryCache = ''
+    this.lastSummarizedIndex = 0
+  }
+
   getSummary(): string {
     return this.summaryCache
   }

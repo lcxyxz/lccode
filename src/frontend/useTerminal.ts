@@ -139,6 +139,8 @@ export function useTerminal(onExit?: () => void) {
     // 根据命令类型执行操作
     if (action.type === 'EXIT') {
       triggerExit()
+    } else if (action.type === 'NEW_CONVERSATION') {
+      agentRef.current?.clearHistory()
     } else if (action.type === 'LLM_QUERY') {
       callAgent(action.query)
     } else if (action.type === 'MCP_ACTION') {

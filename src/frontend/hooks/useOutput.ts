@@ -57,7 +57,7 @@ export function useOutput() {
 
   const clearSections = useCallback(() => {
     currentResponseIdRef.current = null
-    setSections([])
+    setSections(prev => prev.filter(s => s.id < 2))
   }, [])
 
   const resetCommandList = useCallback(() => {
