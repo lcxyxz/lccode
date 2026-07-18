@@ -1,9 +1,12 @@
 import { useState, useCallback, useRef } from 'react'
 import type { OutputSection, CommandEntry, DiffLine } from '../../types/index.js'
+import {getCurrentVersion} from '../../utils/version-checker.js'
+
+const VERSION = getCurrentVersion()
 
 export function useOutput() {
   const [sections, setSections] = useState<OutputSection[]>([
-    { id: 0, type: 'message', title: '', content: 'Welcome to lccode v0.0.4', collapsed: false, color: 'cyan' },
+    { id: 0, type: 'message', title: '', content: `Welcome to lccode ${VERSION}`, collapsed: false, color: 'cyan' },
     { id: 1, type: 'message', title: '', content: 'Type "/help" to see available commands', collapsed: false, color: 'gray' },
   ])
 

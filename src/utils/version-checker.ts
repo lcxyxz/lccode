@@ -6,7 +6,7 @@ const PACKAGE_JSON_PATH = join(import.meta.dirname, '../../package.json')
 
 let cachedResult: { currentVersion: string; latestVersion: string | null; hasUpdate: boolean } | null = null
 
-function getCurrentVersion(): string {
+export function getCurrentVersion(): string {
   try {
     const raw = readFileSync(PACKAGE_JSON_PATH, 'utf-8')
     const data = JSON.parse(raw)
