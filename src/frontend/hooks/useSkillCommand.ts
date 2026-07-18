@@ -21,50 +21,60 @@ export function useSkillCommand(agentRef: React.RefObject<Agent | null>, actions
 
     // /skill — 列出所有 skill
     if (!subcmd) {
-      const list = skillManager.getSkillList()
-      if (list === '(无可用 skill)') {
+      const list = skillManager.getSkillBriefList()
+      if (list.length === 0) {
         actionsRef.current.addMessage(
-          'No skills found.\n\nTo add skills, place .md files in .lccode/skills/ directory.\nEach file should have frontmatter:\n\n---\ndescription: your skill description\ntriggers: keyword1, keyword2\n---\n\n# Your skill instructions here...',
+          'No skills found.\n\nTo add skills, place .md files in .lccode/skills/ directory.\nEach file should have frontmatter:\n\n---\nname: skill-name\ndescription: your skill description\n---\n\n# Your skill instructions here...',
           'yellow'
         )
         return
       }
 
-      const activeName = skillManager.getActiveName()
       let output = 'Skills:\n──────\n'
-      output += list + '\n\n'
-      if (activeName) {
-        output += `Active: /skill ${activeName}\n`
-        output += 'Use /skill --clear to deactivate.'
-      } else {
-        output += 'No skill active. Use /skill <name> to activate.'
+      for (const item of list) {
+        const status = item.active ? '●' : '○'
+        const desc = item.description ? ` - ${item.description}` : ''
+        output += `  ${item.index}. ${status} ${item.name}${desc}\n`
       }
+      output += '\nUsage:\n  /skill           - Show this list\n  /skill 1,2       - Toggle skills by number\n  /skill all       - Enable all skills\n  /skill none      - Disable all skills'
       actionsRef.current.addMessage(output, 'cyan')
       return
     }
 
-    // /skill --clear — 取消激活
-    if (subcmd === '--clear' || subcmd === '-c') {
-      skillManager.deactivate()
-      actionsRef.current.addMessage('Skill deactivated.', 'yellow')
+    // /skill all — 启用全部
+    if (subcmd === 'all') {
+      skillManager.enableAll()
+      agent.refreshToolFilter()
+      actionsRef.current.addMessage('All skills enabled.', 'green')
       return
     }
 
-    // /skill <name> — 激活指定 skill
-    const skill = skillManager.activate(subcmd)
-    if (!skill) {
-      const names = skillManager.getSkillNames().join(', ')
-      actionsRef.current.addMessage(
-        `Skill "${subcmd}" not found.${names ? ` Available: ${names}` : ''}`,
-        'yellow'
-      )
+    // /skill none — 禁用全部
+    if (subcmd === 'none') {
+      skillManager.disableAll()
+      agent.refreshToolFilter()
+      actionsRef.current.addMessage('All skills disabled.', 'yellow')
       return
     }
 
-    actionsRef.current.addMessage(`Skill activated: ${skill.name}`, 'green')
-    if (skill.description) {
-      actionsRef.current.addMessage(skill.description, 'cyan')
+    // /skill 1,2 — 按编号切换
+    const indices = subcmd.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n))
+    if (indices.length === 0) {
+      actionsRef.current.addMessage('Invalid usage. See /skill for help.', 'yellow')
+      return
     }
+
+    for (const idx of indices) {
+      const result = skillManager.toggleSkillByIndex(idx - 1)
+      if (result) {
+        const status = result.enabled ? 'enabled' : 'disabled'
+        const color = result.enabled ? 'green' : 'yellow'
+        actionsRef.current.addMessage(`Skill "${result.name}" ${status}.`, color)
+      } else {
+        actionsRef.current.addMessage(`Invalid skill number: ${idx}`, 'yellow')
+      }
+    }
+    agent.refreshToolFilter()
   }, [agentRef])
 
   return { handleSkillAction: handle }

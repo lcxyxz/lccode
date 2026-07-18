@@ -1,89 +1,96 @@
 /**
  * Skill 管理器
- * 负责加载、查询、匹配和管理 skill 的激活状态
+ * 仿照 McpManager 模式，管理 skill 的加载、激活状态和工具注册
  */
 
 import type { Skill } from './types.js'
+import type { Tool } from '../tools/tool-registry.js'
 import { loadAllSkills } from './loader.js'
+import { adaptSkillTools } from './skill-adapter.js'
+
+interface SkillStatus {
+  name: string
+  description: string
+  enabled: boolean
+}
 
 export class SkillManager {
-  private skills: Map<string, Skill> = new Map()
-  /** 当前会话激活的 skill 名称 */
-  private activeSkillName: string | null = null
+  private skills: Skill[] = []
+  private allTools: Map<string, Tool> = new Map()
+  private activeSkills: Set<string> = new Set()
 
-  /** 从磁盘加载所有 skill */
+  /** 从磁盘加载所有 skill，默认全部激活 */
   async loadFromDisk(): Promise<void> {
-    this.skills.clear()
-    const loaded = loadAllSkills()
-    for (const skill of loaded) {
-      this.skills.set(skill.name, skill)
+    this.skills = loadAllSkills()
+    this.allTools.clear()
+    this.activeSkills.clear()
+
+    const tools = adaptSkillTools(this.skills)
+    for (const tool of tools) {
+      this.allTools.set(tool.name, tool)
+      this.activeSkills.add(tool.name)
     }
   }
 
   /** 获取 skill 数量 */
   get count(): number {
-    return this.skills.size
+    return this.skills.length
   }
 
-  /** 按名称获取 skill */
-  get(name: string): Skill | undefined {
-    return this.skills.get(name)
+  /** 获取所有已加载的 skill 工具 */
+  getAllTools(): Tool[] {
+    return Array.from(this.allTools.values())
   }
 
-  /** 获取当前激活的 skill */
-  getActive(): Skill | null {
-    if (!this.activeSkillName) return null
-    return this.skills.get(this.activeSkillName) ?? null
+  /** 获取所有激活的 skill 工具名称 */
+  getActiveToolNames(): Set<string> {
+    return new Set(this.activeSkills)
   }
 
-  /** 获取当前激活的 skill 名称 */
-  getActiveName(): string | null {
-    return this.activeSkillName
+  /** 获取所有 skill 状态（含激活情况） */
+  getSkillStatus(): SkillStatus[] {
+    return this.skills.map(skill => ({
+      name: skill.name,
+      description: skill.description || '',
+      enabled: this.activeSkills.has(`skill__${skill.name}`),
+    }))
   }
 
-  /** 激活一个 skill */
-  activate(name: string): Skill | null {
-    const skill = this.skills.get(name)
-    if (!skill) return null
-    this.activeSkillName = name
-    return skill
+  /** 获取 skill 简要信息列表（供 /skill 命令展示） */
+  getSkillBriefList(): { index: number; name: string; description: string; active: boolean }[] {
+    return this.skills.map((skill, i) => ({
+      index: i + 1,
+      name: skill.name,
+      description: skill.description || '',
+      active: this.activeSkills.has(`skill__${skill.name}`),
+    }))
   }
 
-  /** 取消当前激活的 skill */
-  deactivate(): void {
-    this.activeSkillName = null
-  }
+  /** 按编号切换 skill 的激活/失效 */
+  toggleSkillByIndex(index: number): { name: string; enabled: boolean } | null {
+    if (index < 0 || index >= this.skills.length) return null
+    const skill = this.skills[index]
+    const toolName = `skill__${skill.name}`
+    const isActive = this.activeSkills.has(toolName)
 
-  /** 根据用户输入文本自动匹配合适的 skill（基于 triggers 关键词） */
-  matchByInput(input: string): Skill | null {
-    const lowerInput = input.toLowerCase()
-    for (const skill of this.skills.values()) {
-      if (!skill.triggers) continue
-      for (const trigger of skill.triggers) {
-        if (lowerInput.includes(trigger.toLowerCase())) {
-          return skill
-        }
-      }
+    if (isActive) {
+      this.activeSkills.delete(toolName)
+    } else {
+      this.activeSkills.add(toolName)
     }
-    return null
+
+    return { name: skill.name, enabled: !isActive }
   }
 
-  /** 获取所有 skill 的摘要信息（用于 /skill 命令和提示词注入） */
-  getSkillList(): string {
-    if (this.skills.size === 0) return '(无可用 skill)'
-
-    const lines: string[] = []
-    for (const skill of this.skills.values()) {
-      const active = skill.name === this.activeSkillName ? ' [已激活]' : ''
-      const desc = skill.description ? ` - ${skill.description}` : ''
-      const triggers = skill.triggers ? ` (触发词: ${skill.triggers.join(', ')})` : ''
-      lines.push(`  /skill ${skill.name}${active}${desc}${triggers}`)
+  /** 启用所有 skill */
+  enableAll(): void {
+    for (const tool of this.allTools.keys()) {
+      this.activeSkills.add(tool)
     }
-    return lines.join('\n')
   }
 
-  /** 获取所有 skill 名称（用于斜杠命令提示补全） */
-  getSkillNames(): string[] {
-    return Array.from(this.skills.keys())
+  /** 禁用所有 skill */
+  disableAll(): void {
+    this.activeSkills.clear()
   }
 }

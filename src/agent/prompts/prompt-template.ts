@@ -11,7 +11,6 @@ import { getSystemPrompt, render } from './loader.js'
 export interface PromptContext {
   history: ChatMessage[]
   summary?: string
-  skillContent?: string
 }
 
 
@@ -46,6 +45,5 @@ export function buildSystemPrompt(
     toolDescriptions: registry.formatToolDescriptions(),
     history: formatHistory(ctx.history),
     summarySection: ctx.summary ? `## 历史摘要\n\n${ctx.summary}` : '',
-    skillSection: ctx.skillContent ? `## 当前 Skill 指令\n\n${ctx.skillContent}` : '',
   })
 }

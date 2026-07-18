@@ -22,7 +22,6 @@ import { Logger, type LoggerConfig, LogLevel } from '../utils/logger.js'
 import { McpManager } from './mcp/manager.js'
 import { Summarizer } from './memory/summarizer.js'
 import { SkillManager } from './skill/skill-manager.js'
-import { createSkillTool } from './skill/skill-tool.js'
 
 // ===================== Agent 类 =====================
 
@@ -67,7 +66,10 @@ export class Agent {
 
     try {
       await agent.skillManager.loadFromDisk()
-      agent.logger.info(`Skills loaded: ${agent.skillManager.count}`)
+      const skillTools = agent.skillManager.getAllTools()
+      skillTools.forEach(tool => agent.registry.register(tool))
+      agent.refreshToolFilter()
+      agent.logger.info(`Skills loaded: ${agent.skillManager.count}, tools: ${skillTools.length}`)
     } catch (error) {
       agent.logger.error('Failed to load skills:', error)
     }
@@ -85,7 +87,6 @@ export class Agent {
     this.registry.register(searchTool)
     this.registry.register(addDirTool)
     this.registry.register(planTool(config))
-    this.registry.register(createSkillTool(this.skillManager))
   }
 
   getToolRegistry(): ToolRegistry {
@@ -100,20 +101,20 @@ export class Agent {
     return this.skillManager
   }
 
-  /** 刷新工具过滤器，将 McpManager 的启用状态同步到 ToolRegistry */
+  /** 刷新工具过滤器，将 McpManager 和 SkillManager 的启用状态同步到 ToolRegistry */
   refreshToolFilter(): void {
-    const activeNames = this.mcpManager.getActiveToolNames()
+    const activeNames = new Set<string>()
+    for (const name of this.mcpManager.getActiveToolNames()) activeNames.add(name)
+    for (const name of this.skillManager.getActiveToolNames()) activeNames.add(name)
     this.registry.setActiveFilter(activeNames)
   }
 
   private buildMessages(): ChatMessage[] {
     const currentMessages = this.chatHistory.slice(this.currentQueryStartIndex)
     const summary = this.summarizer.getSummary()
-    const activeSkill = this.skillManager.getActive()
     const systemPrompt = buildSystemPrompt(this.registry, {
       history: this.chatHistory,
       summary,
-      skillContent: activeSkill?.content,
     })
     
     const messages: ChatMessage[] = [

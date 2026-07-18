@@ -214,7 +214,9 @@
 
 {{summarySection}}
 
-{{skillSection}}
+## Skill 工具
+
+可用工具列表中带有 `skill__` 前缀的是 Skill 工具。调用任一 Skill 工具后，会返回该 Skill 的完整指令内容，你必须严格按照指令执行任务。
 
 ## 对话历史
 
