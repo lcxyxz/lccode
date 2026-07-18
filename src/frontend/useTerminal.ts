@@ -64,7 +64,7 @@ export function useTerminal(onExit?: () => void) {
   actionsRef.current = { addMessage, addCommandResult, addResponse, addDiffPreview, addHistory, clearSections, resetCommandList }
 
   /** LLM 通信 */
-  const { callAgent, llmStatus, tokenUsage, tokenUsageRef } = useLLM(agentRef, {
+  const { callAgent, llmStatus, tokenUsage } = useLLM(agentRef, {
     addMessage: (c, color) => actionsRef.current.addMessage(c, color as any),
     addCommandResult: (cmd, out, ok) => actionsRef.current.addCommandResult(cmd, out, ok),
     addResponse: (c) => actionsRef.current.addResponse(c),
