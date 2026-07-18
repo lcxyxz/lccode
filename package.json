@@ -1,6 +1,6 @@
 {
   "name": "@lcxyxz/lccode",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "description": "一款由桂电找不到工作的学生郁郁寡欢的情况下开发的一个agent助手",
   "main": "./dist/app.js",
   "types": "./dist/app.d.ts",
