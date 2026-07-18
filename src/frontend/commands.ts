@@ -12,8 +12,9 @@ export const COMMANDS: Record<string, string> = {
   help: `Available commands:
   /exit    - Exit the terminal
   /help    - Show this help message
-  /clear   - clear screen
+  /clear   - Clear screen
   /mcp     - Manage MCP tools
+  /skill   - Manage skills
   `,
 
 }

@@ -129,6 +129,7 @@ describe('processCommand', () => {
       expect(COMMANDS['help']).toContain('/help')
       expect(COMMANDS['help']).toContain('/clear')
       expect(COMMANDS['help']).toContain('/mcp')
+      expect(COMMANDS['help']).toContain('/skill')
     })
   })
 
