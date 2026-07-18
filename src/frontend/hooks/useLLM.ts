@@ -19,13 +19,6 @@ export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutp
     totalTokens: 0,
   })
 
-  /** 使用 Ref 同步追踪 token 使用量，确保退出时能获取最新值 */
-  const tokenUsageRef = useRef<TokenUsage>({
-    promptTokens: 0,
-    completionTokens: 0,
-    totalTokens: 0,
-  })
-
   const actionsRef = useRef(actions)
   actionsRef.current = actions
 
@@ -67,14 +60,11 @@ export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutp
             break
           case 'token_usage':
             if (event.usage) {
-              // 更新 Ref（同步，立即生效）
-              tokenUsageRef.current = {
-                promptTokens: tokenUsageRef.current.promptTokens + event.usage.promptTokens,
-                completionTokens: tokenUsageRef.current.completionTokens + event.usage.completionTokens,
-                totalTokens: tokenUsageRef.current.totalTokens + event.usage.totalTokens,
-              }
-              // 更新 State（异步，用于 UI 显示）
-              setTokenUsage({ ...tokenUsageRef.current })
+              setTokenUsage(prev => ({
+                promptTokens: prev.promptTokens + event.usage!.promptTokens,
+                completionTokens: prev.completionTokens + event.usage!.completionTokens,
+                totalTokens: prev.totalTokens + event.usage!.totalTokens,
+              }))
             }
             break
           case 'diff_preview':
@@ -95,5 +85,5 @@ export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutp
     }
   }, [agentRef])
 
-  return { callAgent, llmStatus, tokenUsage, tokenUsageRef }
+  return { callAgent, llmStatus, tokenUsage }
 }
