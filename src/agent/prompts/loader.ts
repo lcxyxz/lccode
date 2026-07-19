@@ -34,12 +34,6 @@ export function getSystemPrompt(): string {
   return load('system-prompt')
 }
 
-// ===================== 摘要提示词 =====================
-
-export function getSummarizePrompt(): string {
-  return load('summarize')
-}
-
 // ===================== 重试消息 =====================
 
 export function getRetryMessage(): string {
