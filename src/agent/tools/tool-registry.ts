@@ -80,9 +80,9 @@ export class ToolRegistry {
   formatToolDescriptions(): string {
     const tools = this.getAll().filter(t => {
       if (this.activeFilter === null) return true
-      // 非 MCP 工具始终保留
-      if (!t.name.startsWith('mcp__')) return true
-      // MCP 工具按过滤器判断
+      // 非 MCP/skill 工具始终保留
+      if (!t.name.startsWith('mcp__') && !t.name.startsWith('skill__')) return true
+      // MCP/skill 工具按过滤器判断
       return this.activeFilter!.has(t.name)
     })
     return tools.map(tool => {

@@ -41,11 +41,11 @@ function AppContent({ onExit }: { onExit?: () => void }) {
     sections, input, llmStatus, tokenUsage, handleSubmit, handleChange, cancelAgent,
     showSuggestions, filteredCommands, selectedIndex,
     showFileSuggestions, filteredFiles, fileSelectedIndex,
-    isExiting,branchVersion,
+    isExiting, branchVersion,
   } = useTerminal(onExit)
 
   if (isExiting) {
-    return <ExitScreen tokenUsage={tokenUsage} />
+    return <ExitScreen />
   }
 
   return (

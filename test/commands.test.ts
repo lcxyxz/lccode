@@ -3,7 +3,7 @@
  *
  * 测试 src/frontend/commands.ts 中的命令处理逻辑：
  * - processCommand: 处理用户输入的命令
- * - 斜杠命令: /exit, /help, /clear, /mcp
+ * - 斜杠命令: /exit, /help, /new, /mcp
  * - 非斜杠命令: 作为 LLM 查询
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -127,27 +127,28 @@ describe('processCommand', () => {
     it('帮助文本应该包含所有命令', () => {
       expect(COMMANDS['help']).toContain('/exit')
       expect(COMMANDS['help']).toContain('/help')
-      expect(COMMANDS['help']).toContain('/clear')
+      expect(COMMANDS['help']).toContain('/new')
       expect(COMMANDS['help']).toContain('/mcp')
+      expect(COMMANDS['help']).toContain('/skill')
     })
   })
 
-  // ---------- /clear 命令 ----------
+  // ---------- /new 命令 ----------
 
-  describe('/clear 命令', () => {
+  describe('/new 命令', () => {
     /**
-     * /clear 应该返回 CONTINUE 动作
+     * /new 应该返回 NEW_CONVERSATION 动作
      */
-    it('应该返回 CONTINUE 动作', () => {
-      const result = processCommand('/clear', ctx)
-      expect(result).toEqual({ type: 'CONTINUE' })
+    it('应该返回 NEW_CONVERSATION 动作', () => {
+      const result = processCommand('/new', ctx)
+      expect(result).toEqual({ type: 'NEW_CONVERSATION' })
     })
 
     /**
-     * /clear 应该调用 clearSections
+     * /new 应该调用 clearSections
      */
     it('应该调用 clearSections', () => {
-      processCommand('/clear', ctx)
+      processCommand('/new', ctx)
       expect(ctx.clearSections).toHaveBeenCalled()
     })
   })
@@ -251,7 +252,7 @@ describe('SLASH_COMMANDS', () => {
   it('应该包含所有支持的斜杠命令', () => {
     expect(SLASH_COMMANDS).toContain('/exit')
     expect(SLASH_COMMANDS).toContain('/help')
-    expect(SLASH_COMMANDS).toContain('/clear')
+    expect(SLASH_COMMANDS).toContain('/new')
     expect(SLASH_COMMANDS).toContain('/mcp')
   })
 

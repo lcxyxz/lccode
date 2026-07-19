@@ -21,10 +21,10 @@ describe('executeCommand', () => {
      * 白名单内的命令应该正常执行
      * 这些是被允许执行的基础命令
      */
-    it('应该允许执行 ls 命令', async () => {
-      const result = await executeCommand('ls /')
+    it('应该允许执行 ls 命令（工作区内路径）', async () => {
+      const result = await executeCommand('ls .')
       expect(result.success).toBe(true)
-      expect(result.command).toBe('ls /')
+      expect(result.command).toBe('ls .')
       expect(result.stdout).toBeTruthy()
     })
 
@@ -47,9 +47,15 @@ describe('executeCommand', () => {
       expect(result.command).toBe('git status')
     })
 
-    it('应该允许执行带参数的命令', async () => {
-      const result = await executeCommand('ls -la /tmp')
+    it('应该允许执行带参数的命令（工作区内路径）', async () => {
+      const result = await executeCommand('ls -la .')
       expect(result.success).toBe(true)
+    })
+
+    it('沙箱应拦截访问工作区外绝对路径的命令', async () => {
+      const result = await executeCommand('ls /')
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('沙箱拦截')
     })
   })
 
@@ -73,11 +79,13 @@ describe('executeCommand', () => {
 
     /**
      * 危险模式匹配的命令应该被拦截
+     * 沙箱在最外层：包含绝对路径的危险命令会被沙箱先拦截，
+     * 不含绝对路径的危险命令由 isCommandSafe 拦截
      */
     it('应该拦截 rm -rf / 命令', async () => {
       const result = await executeCommand('rm -rf /')
       expect(result.success).toBe(false)
-      expect(result.error).toContain('危险命令被拦截')
+      expect(result.error).toContain('沙箱拦截')
     })
 
     it('应该拦截 rm -rf 命令（不带路径）', async () => {
@@ -89,31 +97,32 @@ describe('executeCommand', () => {
     it('应该拦截 sudo rm 命令', async () => {
       const result = await executeCommand('sudo rm -rf /home')
       expect(result.success).toBe(false)
-      expect(result.error).toContain('危险命令被拦截')
+      expect(result.error).toContain('沙箱拦截')
     })
 
     it('应该拦截 mkfs 命令', async () => {
       const result = await executeCommand('mkfs.ext4 /dev/sda')
       expect(result.success).toBe(false)
-      expect(result.error).toContain('危险命令被拦截')
+      expect(result.error).toContain('沙箱拦截')
     })
 
     it('应该拦截 dd if= 命令', async () => {
       const result = await executeCommand('dd if=/dev/zero of=/dev/sda')
       expect(result.success).toBe(false)
+      // dd 的参数格式为 if=path，不会被 extractPaths 提取，由 isCommandSafe 拦截
       expect(result.error).toContain('危险命令被拦截')
     })
 
     it('应该拦截 chmod 777 命令', async () => {
       const result = await executeCommand('chmod 777 /')
       expect(result.success).toBe(false)
-      expect(result.error).toContain('危险命令被拦截')
+      expect(result.error).toContain('沙箱拦截')
     })
 
     it('应该拦截文件重定向命令', async () => {
       const result = await executeCommand('> /etc/passwd')
       expect(result.success).toBe(false)
-      expect(result.error).toContain('危险命令被拦截')
+      expect(result.error).toContain('沙箱拦截')
     })
 
     it('应该拦截管道到 shell 的命令', async () => {

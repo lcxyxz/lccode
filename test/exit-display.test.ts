@@ -208,7 +208,7 @@ describe('退出流程集成', () => {
 
   it('非退出命令不应返回 EXIT action', () => {
     const ctx = createMockContext()
-    const commands = ['/help', '/clear', '/mcp', 'hello world']
+    const commands = ['/help', '/new', '/mcp', 'hello world']
     for (const cmd of commands) {
       const result = processCommand(cmd, ctx)
       expect(result.type).not.toBe('EXIT')

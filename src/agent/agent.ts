@@ -7,6 +7,7 @@ import { ToolRegistry } from './tools/tool-registry.js'
 import { executeCommandTool } from './tools/command-tool.js'
 import { planTool } from './tools/agent-tool.js'
 import { readFileTool, writeFileTool, editFileTool, deleteFileTool, deleteDirectoryTool, searchTool, addDirTool } from './tools/file-tools.js'
+import { sandboxTool } from './tools/sandbox-tool.js'
 import { buildSystemPrompt } from './prompts/prompt-template.js'
 import { getRetryMessage, render } from './prompts/loader.js'
 import type { AgentConfig, AgentEvent } from '../types/index.js'
@@ -20,7 +21,7 @@ import {
 } from '../types/llm-output.js'
 import { Logger, type LoggerConfig, LogLevel } from '../utils/logger.js'
 import { McpManager } from './mcp/manager.js'
-import { Summarizer } from './memory/summarizer.js'
+import { SkillManager } from './skill/skill-manager.js'
 
 // ===================== Agent 类 =====================
 
@@ -28,7 +29,7 @@ export class Agent {
   private provider: LLMProvider
   private registry: ToolRegistry
   private mcpManager: McpManager
-  private summarizer: Summarizer
+  private skillManager: SkillManager
   private chatHistory: ChatMessage[] = []
   private currentQueryStartIndex = 0
   private logger: Logger
@@ -40,7 +41,7 @@ export class Agent {
     this.config = config
     this.registry = new ToolRegistry()
     this.mcpManager = new McpManager()
-    this.summarizer = new Summarizer(this.provider)
+    this.skillManager = new SkillManager()
     this.logger = new Logger(loggerConfig)
 
     this.registerTools(config)
@@ -61,6 +62,16 @@ export class Agent {
       agent.logger.error('Failed to load MCP config:', error)
     }
 
+    try {
+      await agent.skillManager.loadFromDisk()
+      const skillTools = agent.skillManager.getAllTools()
+      skillTools.forEach(tool => agent.registry.register(tool))
+      agent.refreshToolFilter()
+      agent.logger.info(`Skills loaded: ${agent.skillManager.count}, tools: ${skillTools.length}`)
+    } catch (error) {
+      agent.logger.error('Failed to load skills:', error)
+    }
+
     return agent
   }
 
@@ -74,6 +85,7 @@ export class Agent {
     this.registry.register(searchTool)
     this.registry.register(addDirTool)
     this.registry.register(planTool(config))
+    this.registry.register(sandboxTool)
   }
 
   getToolRegistry(): ToolRegistry {
@@ -84,18 +96,22 @@ export class Agent {
     return this.mcpManager
   }
 
-  /** 刷新工具过滤器，将 McpManager 的启用状态同步到 ToolRegistry */
+  getSkillManager(): SkillManager {
+    return this.skillManager
+  }
+
+  /** 刷新工具过滤器，将 McpManager 和 SkillManager 的启用状态同步到 ToolRegistry */
   refreshToolFilter(): void {
-    const activeNames = this.mcpManager.getActiveToolNames()
+    const activeNames = new Set<string>()
+    for (const name of this.mcpManager.getActiveToolNames()) activeNames.add(name)
+    for (const name of this.skillManager.getActiveToolNames()) activeNames.add(name)
     this.registry.setActiveFilter(activeNames)
   }
 
   private buildMessages(): ChatMessage[] {
     const currentMessages = this.chatHistory.slice(this.currentQueryStartIndex)
-    const summary = this.summarizer.getSummary()
     const systemPrompt = buildSystemPrompt(this.registry, {
       history: this.chatHistory,
-      summary,
     })
     
     const messages: ChatMessage[] = [
@@ -111,31 +127,6 @@ export class Agent {
 
   private pushAssistant(content: string) {
     this.chatHistory.push({ role: 'assistant', content: content })
-  }
-
-  private async checkAndSummarize(): Promise<void> {
-    const summaryThreshold = this.config.summaryThreshold ?? 15
-    const keepRecent = this.config.keepRecent ?? 20
-    const userMessageCount = this.chatHistory.filter(msg => msg.role === 'user').length
-    if (userMessageCount > summaryThreshold) {
-      this.logger.debug(`User messages (${userMessageCount}) exceed threshold (${summaryThreshold}), generating summary...`)
-      
-      // 对超过阈值的消息进行摘要
-      const lastSummarizedIndex = this.summarizer.getLastSummarizedIndex()
-      const messagesToSummarize = this.chatHistory.slice(lastSummarizedIndex)
-      
-      if (messagesToSummarize.length > 0) {
-        await this.summarizer.summarize(messagesToSummarize)
-        
-        // 清除已摘要的消息，只保留最近的几轮对话
-        if (this.chatHistory.length > keepRecent) {
-          this.chatHistory = this.chatHistory.slice(-keepRecent)
-          this.currentQueryStartIndex = 0
-        }
-        
-        this.logger.debug('Summary generated, history trimmed')
-      }
-    }
   }
 
   /**
@@ -222,7 +213,6 @@ export class Agent {
       // 处理最终答案
       if (isFinalAnswerOutput(output)) {
         this.pushAssistant(llmResult.response)
-        await this.checkAndSummarize()
         yield { type: 'response', content: output.answer }
         this.logger.logConversation(query, output.answer, round)
         return
@@ -235,7 +225,6 @@ export class Agent {
           responseContent += '\n\n选项：\n' + output.options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')
         }
         this.pushAssistant(llmResult.response)
-        await this.checkAndSummarize()
         yield { type: 'response', content: responseContent }
         this.logger.logConversation(query, responseContent, round)
         return
@@ -245,7 +234,6 @@ export class Agent {
       if (isErrorOutput(output)) {
         const errorContent = `错误：${output.error}`
         this.pushAssistant(llmResult.response)
-        await this.checkAndSummarize()
         yield { type: 'response', content: errorContent }
         this.logger.logConversation(query, errorContent, round)
         return
@@ -305,8 +293,6 @@ export class Agent {
 
         this.chatHistory.push({ role: 'assistant', content: llmResult.response })
         this.chatHistory.push({ role: 'user', content: `[ToolExeInfo] ${resultMsg}` })
-
-        await this.checkAndSummarize()
       }
     }
 
@@ -321,6 +307,7 @@ export class Agent {
 
   clearHistory() {
     this.chatHistory = []
+    this.currentQueryStartIndex = 0
   }
 
   async disconnect(): Promise<void> {

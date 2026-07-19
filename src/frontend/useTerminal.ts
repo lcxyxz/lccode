@@ -8,6 +8,7 @@ import { useExit } from './hooks/useExit.js'
 import { useAgent } from './hooks/useAgent.js'
 import { useLLM } from './hooks/useLLM.js'
 import { useMcpCommand } from './hooks/useMcpCommand.js'
+import { useSkillCommand } from './hooks/useSkillCommand.js'
 import { processCommand } from './commands.js'
 import type { LLMStatus } from '../types/index.js'
 
@@ -77,6 +78,11 @@ export function useTerminal(onExit?: () => void) {
     addMessage: (c, color) => actionsRef.current.addMessage(c, color as any),
   })
 
+  /** Skill 命令处理 */
+  const { handleSkillAction } = useSkillCommand(agentRef, {
+    addMessage: (c, color) => actionsRef.current.addMessage(c, color as any),
+  })
+
   /** 输入框内容的 Ref，用于在 useInput 回调中访问最新值 */
   const inputRef = useRef('')
 
@@ -133,12 +139,16 @@ export function useTerminal(onExit?: () => void) {
     // 根据命令类型执行操作
     if (action.type === 'EXIT') {
       triggerExit()
+    } else if (action.type === 'NEW_CONVERSATION') {
+      agentRef.current?.clearHistory()
     } else if (action.type === 'LLM_QUERY') {
       callAgent(action.query)
     } else if (action.type === 'MCP_ACTION') {
       handleMcpAction(action.args)
+    } else if (action.type === 'SKILL_ACTION') {
+      handleSkillAction(action.args)
     }
-  }, [callAgent, handleMcpAction])
+  }, [callAgent, handleMcpAction, handleSkillAction])
 
   /** 输入框内容变化处理 */
   const handleChange = useCallback((value: string) => { setInput(value) }, [])
@@ -224,7 +234,7 @@ export function useTerminal(onExit?: () => void) {
 
     // LLM 相关
     llmStatus,       // LLM 状态（idle/loading/done/error）
-    tokenUsage,      // Token 使用统计
+    tokenUsage,      // Token 使用统计（State，用于正常 UI 显示）
     cancelAgent,     // 取消对话函数
 
     // 退出相关
