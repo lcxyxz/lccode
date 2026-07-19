@@ -5,3 +5,4 @@ node_modules/
 .lccode/
 .gitignore
 __pycache__
+github_secret.txt

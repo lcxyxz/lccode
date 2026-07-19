@@ -4,12 +4,11 @@
  * 测试 src/agent/prompts/loader.ts 中的所有功能：
  * - render: 变量插值
  * - getSystemPrompt: 获取系统提示词
- * - getSummarizePrompt: 获取摘要提示词
  * - getRetryMessage: 获取重试消息
  * - PARSE_HINTS: 解析提示
  */
 import { describe, it, expect } from 'vitest'
-import { render, getSystemPrompt, getSummarizePrompt, getRetryMessage, PARSE_HINTS } from '../src/agent/prompts/loader.js'
+import { render, getSystemPrompt, getRetryMessage, PARSE_HINTS } from '../src/agent/prompts/loader.js'
 
 // ===================== render 测试 =====================
 
@@ -107,19 +106,6 @@ describe('getSystemPrompt', () => {
     const prompt1 = getSystemPrompt()
     const prompt2 = getSystemPrompt()
     expect(prompt1).toBe(prompt2)
-  })
-})
-
-// ===================== getSummarizePrompt 测试 =====================
-
-describe('getSummarizePrompt', () => {
-  /**
-   * 应该返回非空字符串
-   */
-  it('应该返回非空字符串', () => {
-    const prompt = getSummarizePrompt()
-    expect(typeof prompt).toBe('string')
-    expect(prompt.length).toBeGreaterThan(0)
   })
 })
 

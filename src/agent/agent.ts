@@ -21,7 +21,6 @@ import {
 } from '../types/llm-output.js'
 import { Logger, type LoggerConfig, LogLevel } from '../utils/logger.js'
 import { McpManager } from './mcp/manager.js'
-import { Summarizer } from './memory/summarizer.js'
 import { SkillManager } from './skill/skill-manager.js'
 
 // ===================== Agent 类 =====================
@@ -30,7 +29,6 @@ export class Agent {
   private provider: LLMProvider
   private registry: ToolRegistry
   private mcpManager: McpManager
-  private summarizer: Summarizer
   private skillManager: SkillManager
   private chatHistory: ChatMessage[] = []
   private currentQueryStartIndex = 0
@@ -43,7 +41,6 @@ export class Agent {
     this.config = config
     this.registry = new ToolRegistry()
     this.mcpManager = new McpManager()
-    this.summarizer = new Summarizer(this.provider)
     this.skillManager = new SkillManager()
     this.logger = new Logger(loggerConfig)
 
@@ -113,10 +110,8 @@ export class Agent {
 
   private buildMessages(): ChatMessage[] {
     const currentMessages = this.chatHistory.slice(this.currentQueryStartIndex)
-    const summary = this.summarizer.getSummary()
     const systemPrompt = buildSystemPrompt(this.registry, {
       history: this.chatHistory,
-      summary,
     })
     
     const messages: ChatMessage[] = [
@@ -132,31 +127,6 @@ export class Agent {
 
   private pushAssistant(content: string) {
     this.chatHistory.push({ role: 'assistant', content: content })
-  }
-
-  private async checkAndSummarize(): Promise<void> {
-    const summaryThreshold = this.config.summaryThreshold ?? 15
-    const keepRecent = this.config.keepRecent ?? 20
-    const userMessageCount = this.chatHistory.filter(msg => msg.role === 'user').length
-    if (userMessageCount > summaryThreshold) {
-      this.logger.debug(`User messages (${userMessageCount}) exceed threshold (${summaryThreshold}), generating summary...`)
-      
-      // 对超过阈值的消息进行摘要
-      const lastSummarizedIndex = this.summarizer.getLastSummarizedIndex()
-      const messagesToSummarize = this.chatHistory.slice(lastSummarizedIndex)
-      
-      if (messagesToSummarize.length > 0) {
-        await this.summarizer.summarize(messagesToSummarize)
-        
-        // 清除已摘要的消息，只保留最近的几轮对话
-        if (this.chatHistory.length > keepRecent) {
-          this.chatHistory = this.chatHistory.slice(-keepRecent)
-          this.currentQueryStartIndex = 0
-        }
-        
-        this.logger.debug('Summary generated, history trimmed')
-      }
-    }
   }
 
   /**
@@ -243,7 +213,6 @@ export class Agent {
       // 处理最终答案
       if (isFinalAnswerOutput(output)) {
         this.pushAssistant(llmResult.response)
-        await this.checkAndSummarize()
         yield { type: 'response', content: output.answer }
         this.logger.logConversation(query, output.answer, round)
         return
@@ -256,7 +225,6 @@ export class Agent {
           responseContent += '\n\n选项：\n' + output.options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')
         }
         this.pushAssistant(llmResult.response)
-        await this.checkAndSummarize()
         yield { type: 'response', content: responseContent }
         this.logger.logConversation(query, responseContent, round)
         return
@@ -266,7 +234,6 @@ export class Agent {
       if (isErrorOutput(output)) {
         const errorContent = `错误：${output.error}`
         this.pushAssistant(llmResult.response)
-        await this.checkAndSummarize()
         yield { type: 'response', content: errorContent }
         this.logger.logConversation(query, errorContent, round)
         return
@@ -326,8 +293,6 @@ export class Agent {
 
         this.chatHistory.push({ role: 'assistant', content: llmResult.response })
         this.chatHistory.push({ role: 'user', content: `[ToolExeInfo] ${resultMsg}` })
-
-        await this.checkAndSummarize()
       }
     }
 
@@ -343,7 +308,6 @@ export class Agent {
   clearHistory() {
     this.chatHistory = []
     this.currentQueryStartIndex = 0
-    this.summarizer.reset()
   }
 
   async disconnect(): Promise<void> {

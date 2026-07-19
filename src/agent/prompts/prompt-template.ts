@@ -10,7 +10,6 @@ import { getSystemPrompt, render } from './loader.js'
 
 export interface PromptContext {
   history: ChatMessage[]
-  summary?: string
 }
 
 
@@ -44,6 +43,5 @@ export function buildSystemPrompt(
   return render(getSystemPrompt(), {
     toolDescriptions: registry.formatToolDescriptions(),
     history: formatHistory(ctx.history),
-    summarySection: ctx.summary ? `## 历史摘要\n\n${ctx.summary}` : '',
   })
 }
