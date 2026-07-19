@@ -9,10 +9,8 @@
 - **多厂商 AI 对话**：支持 DeepSeek 和 Mimo 两家服务商，灵活切换模型
 - **MCP 协议**：支持 Model Context Protocol，可连接外部工具服务器
 - **命令执行**：AI 可以生成并执行终端命令，实时反馈结果
-- **思考过程**：显示 AI 的思考过程（可选）
 - **交互式界面**：基于 Ink 的终端 UI，支持文件和命令建议
 - **Diff 预览**：文件修改后展示带行号和语法高亮的差异对比
-- **记忆系统**：支持跨会话的上下文记忆和自动摘要
 - **计划任务**：支持 plan_task 子 Agent，自动规划和执行复杂任务
 - **Skill 技能系统**：支持自定义 Markdown 技能文件，扩展 AI 能力
 - **沙箱权限**：细粒度的权限控制，支持 strict/relaxed/permissive 三种预设
@@ -256,27 +254,7 @@ EOF
 
 启动时会自动加载所有配置的 MCP 服务器，AI 会根据对话需要自动调用相应的 MCP 工具。
 
-### 本地运行
 
-```bash
-npm start
-```
-
-## 开发命令
-
-```bash
-# 开发模式
-npm start
-
-# 构建
-npm run build
-
-# 运行测试
-npm test
-
-# 监视测试
-npm run test:watch
-```
 
 ## 项目结构
 
