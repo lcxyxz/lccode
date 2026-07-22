@@ -143,10 +143,17 @@ export const writeFileTool: Tool = {
       const filePath = params.file_path
       const content = params.content
 
-      // 路径验证：防止越界访问
       const validation = validatePath(filePath)
       if (!validation.valid) {
         return { success: false, output: '', error: validation.error }
+      }
+
+      if (validation.outsideWorkspace) {
+        return {
+          success: false,
+          output: '',
+          error: `需要确认: 操作目标 ${filePath} 不在当前工作区内，是否继续？`,
+        }
       }
 
       // 自动创建父目录
@@ -180,10 +187,17 @@ export const editFileTool: Tool = {
     try {
       const filePath = params.file_path
 
-      // 路径验证：防止越界访问
       const validation = validatePath(filePath)
       if (!validation.valid) {
         return { success: false, output: '', error: validation.error }
+      }
+
+      if (validation.outsideWorkspace) {
+        return {
+          success: false,
+          output: '',
+          error: `需要确认: 编辑目标 ${filePath} 不在当前工作区内，是否继续？`,
+        }
       }
 
       if (!existsSync(validation.resolved!)) {
@@ -275,10 +289,17 @@ export const deleteFileTool: Tool = {
     try {
       const filePath = params.file_path
 
-      // 路径验证：防止越界访问
       const validation = validatePath(filePath)
       if (!validation.valid) {
         return { success: false, output: '', error: validation.error }
+      }
+
+      if (validation.outsideWorkspace) {
+        return {
+          success: false,
+          output: '',
+          error: `需要确认: 删除目标 ${filePath} 不在当前工作区内，是否继续？`,
+        }
       }
 
       if (!existsSync(validation.resolved!)) {
@@ -311,10 +332,17 @@ export const deleteDirectoryTool: Tool = {
     try {
       const dirPath = params.dir_path
 
-      // 路径验证：防止越界访问
       const validation = validatePath(dirPath)
       if (!validation.valid) {
         return { success: false, output: '', error: validation.error }
+      }
+
+      if (validation.outsideWorkspace) {
+        return {
+          success: false,
+          output: '',
+          error: `需要确认: 删除目标 ${dirPath} 不在当前工作区内，是否继续？`,
+        }
       }
 
       if (!existsSync(validation.resolved!)) {
@@ -524,10 +552,17 @@ export const addDirTool: Tool = {
       const dirPath = params.dir_path
       const recursive = params.recursive !== false
 
-      // 路径验证：防止越界访问
       const validation = validatePath(dirPath)
       if (!validation.valid) {
         return { success: false, output: '', error: validation.error }
+      }
+
+      if (validation.outsideWorkspace) {
+        return {
+          success: false,
+          output: '',
+          error: `需要确认: 创建目标 ${dirPath} 不在当前工作区内，是否继续？`,
+        }
       }
 
       if (existsSync(validation.resolved!)) {

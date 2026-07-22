@@ -63,7 +63,7 @@ export interface SandboxConfig {
 /** 默认配置：开发友好模式 */
 const DEFAULT_CONFIG: SandboxConfig = {
   enabled: [
-    'network',          // npm/pip/docker 都需要网络
+    'network',          // 网络访问
     'env_vars',         // 脚本和工具链依赖环境变量
     'parent_traversal', // ../ 是开发中的基本操作
     'user_dirs',        // ~/ 是常见路径
@@ -76,14 +76,12 @@ const DEFAULT_CONFIG: SandboxConfig = {
   allowedCommandPrefixes: [
     'docker',           // 容器化开发
     'python', 'python3', // 脚本和工具
-    'node', 'npm', 'npx', 'yarn', 'pnpm', // JS 生态
+    'node', 'npx',      // Node.js 运行
     'cargo', 'rustup',  // Rust
     'go',               // Go
     'java', 'javac',    // Java
     'make', 'cmake',    // 构建工具
     'vim', 'nano',      // 编辑器
-    'pip', 'pip3',      // Python 包
-    'gem', 'bundle',    // Ruby
     'gradle', 'mvn',    // JVM 构建
     'gh', 'glab',       // Git 平台 CLI
   ],
@@ -95,6 +93,19 @@ const DEFAULT_CONFIG: SandboxConfig = {
     'dd\\s+if=',              // 拦截 dd
     ':\\(\\)\\{.*\\|.*&\\s*\\}:', // 拦截 fork bomb
     '\\|\\s*(bash|sh|cmd|powershell)\\b', // 拦截管道到 shell
+    'wget\\s+',               // 拦截 wget 下载
+    'apt(-get)?\\s+install',  // 拦截 apt install
+    'apt(-get)?\\s+remove',   // 拦截 apt remove
+    'apt(-get)?\\s+purge',    // 拦截 apt purge
+    'yum\\s+install',         // 拦截 yum install
+    'dnf\\s+install',         // 拦截 dnf install
+    'npm\\s+(i|install)\\b',  // 拦截 npm install
+    'yarn\\s+(add|install)\\b', // 拦截 yarn install
+    'pnpm\\s+(add|install)\\b', // 拦截 pnpm install
+    'pip\\s+install',         // 拦截 pip install
+    'pip3\\s+install',        // 拦截 pip3 install
+    'cargo\\s+install',       // 拦截 cargo install
+    'gem\\s+install',         // 拦截 gem install
   ],
 }
 
@@ -210,23 +221,22 @@ export function setPreset(preset: 'strict' | 'relaxed' | 'permissive'): void {
 }
 
 /**
- * 验证路径是否在工作区内
- * 防止 ../path 穿越攻击
+ * 验证路径
+ * 返回 valid=true 表示路径有效，outsideWorkspace=true 表示在工作区外（需要确认）
  */
-export function validatePath(filePath: string): { valid: boolean; resolved?: string; error?: string } {
-  // 解析绝对路径
+export function validatePath(filePath: string): { valid: boolean; resolved?: string; outsideWorkspace?: boolean; error?: string } {
   const resolved = isAbsolute(filePath)
     ? resolve(filePath)
     : resolve(WORKSPACE_ROOT, filePath)
 
-  // 检查是否在工作区内
   const rel = relative(WORKSPACE_ROOT, resolved)
 
-  // relative 返回 '..' 开头表示在工作区外
+  // 路径在工作区外
   if (rel.startsWith('..') || isAbsolute(rel)) {
     return {
-      valid: false,
-      error: `路径越界: ${filePath} 不在工作区内`,
+      valid: true,
+      resolved,
+      outsideWorkspace: true,
     }
   }
 

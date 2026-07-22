@@ -131,6 +131,10 @@
 
 沙箱默认配置：`network`、`env_vars`、`parent_traversal`、`user_dirs`、`absolute_paths` 已启用，`system_dirs` 和 `process` 已禁用。大部分开发命令可直接执行。
 
+**安装/下载类命令会被拦截**（`wget`、`apt install`、`npm install`、`pip install`、`cargo install` 等），需要用户确认后才能执行。被拦截时直接告知用户原因，让用户决定是否继续。
+
+**工作区外的文件操作会被拦截**（写入、编辑、删除、创建目录），需要用户确认后才能执行。读取操作不受此限制。
+
 ### 权限被拦截时的处理
 
 当命令被沙箱拦截时，错误信息会说明被拦截的原因。**不要重复尝试被拦截的命令**，而是：
@@ -150,6 +154,8 @@
 | `absolute_paths` | 绝对路径 | 已启用 |
 | `system_dirs` | 系统目录 | 已禁用 |
 | `process` | 进程操作 | 已禁用 |
+
+**安装/下载类命令**（`wget`、`apt install`、`npm install`、`pip install` 等）默认被沙箱拦截，需要用户确认。
 
 可以用 `sandbox(action="list")` 查看当前权限状态。
 
