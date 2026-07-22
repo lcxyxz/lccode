@@ -1,6 +1,15 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { execSync, spawn } from 'child_process'
+import { exec } from 'child_process'
+
+function execAsync(command: string, options?: { timeout?: number }): Promise<string> {
+  return new Promise((resolve, reject) => {
+    exec(command, options ?? {}, (error, stdout) => {
+      if (error) reject(error)
+      else resolve(stdout)
+    })
+  })
+}
 
 const NPM_REGISTRY = 'https://registry.npmjs.org/@lcxyxz/lccode/latest'
 const PACKAGE_JSON_PATH = join(import.meta.dirname, '../../package.json')
@@ -66,8 +75,7 @@ export async function autoUpdate(): Promise<boolean> {
   if (!result.hasUpdate || !result.latestVersion) return false
 
   try {
-    execSync('npm install -g @lcxyxz/lccode@latest', {
-      stdio: 'pipe',
+    await execAsync('npm install -g @lcxyxz/lccode@latest', {
       timeout: 60000,
     })
     return true
@@ -76,12 +84,4 @@ export async function autoUpdate(): Promise<boolean> {
   }
 }
 
-export function restartProcess(): void {
-  const argv = process.argv
-  const child = spawn(process.execPath, argv, {
-    stdio: 'inherit',
-    detached: false,
-  })
-  child.unref()
-  process.exit(0)
-}
+
