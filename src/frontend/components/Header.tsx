@@ -1,11 +1,8 @@
 import { Box, Text } from 'ink'
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
-import { homedir } from 'os'
 import { useUpdateCheck } from '../hooks/useUpdateCheck.js'
+import { getLogo } from '../../config.js'
 
-const logoPath = join(homedir(), '.lccode', 'logo.txt')
-const logo = existsSync(logoPath) ? readFileSync(logoPath, 'utf-8') : ''
+const logo = getLogo()
 
 export function Header() {
   const { message } = useUpdateCheck()

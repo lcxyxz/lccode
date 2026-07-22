@@ -32,15 +32,16 @@ const DEFAULT_LOGO = `
   ██                           ██
   ██      ▄███▀ ▄███▀ ▄███▄ ▄████ ▄█▀█▄
   ██      ██    ██    ██ ██ ██ ██ ██▄█▀
- ████████▄▀███▄▄▀███▄▄▀███▀▄█▀███▄▀█▄▄▄`
+ ████████▄▀███▄▄▀███▄▄▀███▀ █▀███▄▀█▄▄▄`
+
+export function getLogo(): string {
+  return DEFAULT_LOGO
+}
 
 function initConfigDir(): void {
   mkdirSync(USER_CONFIG_DIR, { recursive: true })
   if (!existsSync(USER_CONFIG_FILE)) {
     writeFileSync(USER_CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2))
-  }
-  if (!existsSync(join(USER_CONFIG_DIR, 'logo.txt'))) {
-    writeFileSync(join(USER_CONFIG_DIR, 'logo.txt'), DEFAULT_LOGO)
   }
   // 初始化项目级 .lccode 目录（如果不存在则静默跳过）
   if (existsSync(PROJECT_CONFIG_DIR)) {
