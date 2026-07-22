@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { checkForUpdate, getUpdateMessage, autoUpdate, restartProcess } from '../../utils/version-checker.js'
+import { checkForUpdate, autoUpdate } from '../../utils/version-checker.js'
 
 export interface UpdateState {
   hasUpdate: boolean
@@ -41,7 +41,13 @@ export function useUpdateCheck(): UpdateState {
 
       const success = await autoUpdate()
       if (success) {
-        restartProcess()
+        setState({
+          hasUpdate: true,
+          currentVersion: result.currentVersion,
+          latestVersion: result.latestVersion,
+          message: `已更新到 v${result.latestVersion}，请重启程序以使用新版本`,
+          updating: false,
+        })
       } else {
         setState({
           hasUpdate: true,
