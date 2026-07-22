@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { execSync, spawn } from 'child_process'
 
 const NPM_REGISTRY = 'https://registry.npmjs.org/@lcxyxz/lccode/latest'
 const PACKAGE_JSON_PATH = join(import.meta.dirname, '../../package.json')
@@ -57,5 +58,30 @@ export async function checkForUpdate(): Promise<{ currentVersion: string; latest
 
 export function getUpdateMessage(result: { currentVersion: string; latestVersion: string | null; hasUpdate: boolean }): string | null {
   if (!result.hasUpdate || !result.latestVersion) return null
-  return `发现新版本 v${result.latestVersion}，运行 npm install -g @lcxyxz/lccode@latest 更新`
+  return `发现新版本 v${result.latestVersion}，正在自动更新...`
+}
+
+export async function autoUpdate(): Promise<boolean> {
+  const result = await checkForUpdate()
+  if (!result.hasUpdate || !result.latestVersion) return false
+
+  try {
+    execSync('npm install -g @lcxyxz/lccode@latest', {
+      stdio: 'pipe',
+      timeout: 60000,
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function restartProcess(): void {
+  const argv = process.argv
+  const child = spawn(process.execPath, argv, {
+    stdio: 'inherit',
+    detached: false,
+  })
+  child.unref()
+  process.exit(0)
 }

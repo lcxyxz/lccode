@@ -60,13 +60,53 @@ export interface SandboxConfig {
   deniedCommandPatterns: string[]
 }
 
-/** 默认配置：严格模式 */
+/** 默认配置：开发友好模式 */
 const DEFAULT_CONFIG: SandboxConfig = {
-  enabled: [],
-  disabled: [...ALL_PERMISSIONS],
-  allowedCommandPrefixes: [],
+  enabled: [
+    'network',          // 网络访问
+    'env_vars',         // 脚本和工具链依赖环境变量
+    'parent_traversal', // ../ 是开发中的基本操作
+    'user_dirs',        // ~/ 是常见路径
+    'absolute_paths',   // /tmp, /opt 等需要访问
+  ],
+  disabled: [
+    'system_dirs',      // 修改系统配置
+    'process',          // 进程
+  ],
+  allowedCommandPrefixes: [
+    'docker',           // 容器化开发
+    'python', 'python3', // 脚本和工具
+    'node', 'npx',      // Node.js 运行
+    'cargo', 'rustup',  // Rust
+    'go',               // Go
+    'java', 'javac',    // Java
+    'make', 'cmake',    // 构建工具
+    'vim', 'nano',      // 编辑器
+    'gradle', 'mvn',    // JVM 构建
+    'gh', 'glab',       // Git 平台 CLI
+  ],
   allowedPathPrefixes: [],
-  deniedCommandPatterns: [],
+  deniedCommandPatterns: [
+    'rm\\s+-rf\\s+/',         // 拦截 rm -rf /
+    'sudo\\s+rm',             // 拦截 sudo rm
+    'mkfs',                   // 拦截格式化
+    'dd\\s+if=',              // 拦截 dd
+    ':\\(\\)\\{.*\\|.*&\\s*\\}:', // 拦截 fork bomb
+    '\\|\\s*(bash|sh|cmd|powershell)\\b', // 拦截管道到 shell
+    'wget\\s+',               // 拦截 wget 下载
+    'apt(-get)?\\s+install',  // 拦截 apt install
+    'apt(-get)?\\s+remove',   // 拦截 apt remove
+    'apt(-get)?\\s+purge',    // 拦截 apt purge
+    'yum\\s+install',         // 拦截 yum install
+    'dnf\\s+install',         // 拦截 dnf install
+    'npm\\s+(i|install)\\b',  // 拦截 npm install
+    'yarn\\s+(add|install)\\b', // 拦截 yarn install
+    'pnpm\\s+(add|install)\\b', // 拦截 pnpm install
+    'pip\\s+install',         // 拦截 pip install
+    'pip3\\s+install',        // 拦截 pip3 install
+    'cargo\\s+install',       // 拦截 cargo install
+    'gem\\s+install',         // 拦截 gem install
+  ],
 }
 
 /** 缓存的配置 */
@@ -154,17 +194,26 @@ export function setPreset(preset: 'strict' | 'relaxed' | 'permissive'): void {
 
   switch (preset) {
     case 'strict':
-      // 默认：全部禁用
+      // 严格模式：全部禁用
+      config.enabled = []
+      config.disabled = [...ALL_PERMISSIONS]
+      config.allowedCommandPrefixes = []
+      config.deniedCommandPatterns = [
+        'rm\\s+-rf\\s+/',
+        'sudo\\s+rm',
+        'mkfs',
+        'dd\\s+if=',
+        ':\\(\\)\\{.*\\|.*&\\s*\\}:',
+        '\\|\\s*(bash|sh|cmd|powershell)\\b',
+      ]
       break
     case 'relaxed':
-      // 允许网络和环境变量
-      config.enabled = ['network', 'env_vars']
-      config.disabled = ALL_PERMISSIONS.filter(p => !config.enabled.includes(p))
+      // 宽松模式：当前默认配置（开发友好）
       break
     case 'permissive':
-      // 允许除绝对路径外的所有权限
-      config.enabled = ALL_PERMISSIONS.filter(p => p !== 'absolute_paths')
-      config.disabled = ['absolute_paths']
+      // 开放模式：允许所有权限
+      config.enabled = [...ALL_PERMISSIONS]
+      config.disabled = []
       break
   }
 
@@ -172,23 +221,22 @@ export function setPreset(preset: 'strict' | 'relaxed' | 'permissive'): void {
 }
 
 /**
- * 验证路径是否在工作区内
- * 防止 ../path 穿越攻击
+ * 验证路径
+ * 返回 valid=true 表示路径有效，outsideWorkspace=true 表示在工作区外（需要确认）
  */
-export function validatePath(filePath: string): { valid: boolean; resolved?: string; error?: string } {
-  // 解析绝对路径
+export function validatePath(filePath: string): { valid: boolean; resolved?: string; outsideWorkspace?: boolean; error?: string } {
   const resolved = isAbsolute(filePath)
     ? resolve(filePath)
     : resolve(WORKSPACE_ROOT, filePath)
 
-  // 检查是否在工作区内
   const rel = relative(WORKSPACE_ROOT, resolved)
 
-  // relative 返回 '..' 开头表示在工作区外
+  // 路径在工作区外
   if (rel.startsWith('..') || isAbsolute(rel)) {
     return {
-      valid: false,
-      error: `路径越界: ${filePath} 不在工作区内`,
+      valid: true,
+      resolved,
+      outsideWorkspace: true,
     }
   }
 
@@ -227,6 +275,13 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
   const trimmed = command.trim()
   const config = loadSandboxConfig()
 
+  // 检查自定义允许前缀（优先级最高）
+  for (const prefix of config.allowedCommandPrefixes) {
+    if (trimmed.startsWith(prefix)) {
+      return { safe: true }
+    }
+  }
+
   // 检查自定义拒绝模式
   for (const pattern of config.deniedCommandPatterns) {
     try {
@@ -236,13 +291,6 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
       }
     } catch {
       // 忽略无效的正则
-    }
-  }
-
-  // 检查自定义允许前缀
-  for (const prefix of config.allowedCommandPrefixes) {
-    if (trimmed.startsWith(prefix)) {
-      return { safe: true }
     }
   }
 
