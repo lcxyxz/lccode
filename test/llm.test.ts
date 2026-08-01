@@ -7,7 +7,7 @@
  *
  * 使用 vi.mock 模拟 OpenAI 客户端
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'bun:test'
 import type { ChatMessage } from '../src/services/types.js'
 
 // ===================== Mock 设置 =====================

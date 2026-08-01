@@ -8,7 +8,7 @@
  * 注意：沙箱拦截通过 validateCommand 间接测试，
  * 默认配置下 absolute_paths 权限已启用，ls / 等命令会被放行
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'bun:test'
 import { executeCommand, getPlatform } from '../src/services/command-executor.js'
 
 // ===================== executeCommand 测试 =====================

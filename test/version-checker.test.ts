@@ -9,7 +9,7 @@
  * 注意：checkForUpdate 会调用 npm registry API，
  * 测试使用 mock fetch 来避免真实网络请求
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'bun:test'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -18,6 +18,12 @@ import { join } from 'path'
 const originalFetch = globalThis.fetch
 
 let mockFetch: ReturnType<typeof vi.fn>
+
+/** 模块内缓存（cachedResult）依赖每次导入新实例，用 query 参数破坏模块缓存 */
+let moduleSeq = 0
+function freshModule(): string {
+  return `../src/utils/version-checker.js?fresh=${moduleSeq++}`
+}
 
 beforeEach(() => {
   mockFetch = vi.fn()
@@ -32,12 +38,8 @@ afterEach(() => {
 // ===================== getUpdateMessage 测试 =====================
 
 describe('getUpdateMessage', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-  })
-
   it('有新版本时应该返回正在更新的提示', async () => {
-    const { getUpdateMessage } = await import('../src/utils/version-checker.js')
+    const { getUpdateMessage } = await import(freshModule())
 
     const result = getUpdateMessage({
       currentVersion: '0.0.1',
@@ -51,7 +53,7 @@ describe('getUpdateMessage', () => {
   })
 
   it('没有新版本时应该返回 null', async () => {
-    const { getUpdateMessage } = await import('../src/utils/version-checker.js')
+    const { getUpdateMessage } = await import(freshModule())
 
     const result = getUpdateMessage({
       currentVersion: '0.0.2',
@@ -63,7 +65,7 @@ describe('getUpdateMessage', () => {
   })
 
   it('latestVersion 为 null 时应该返回 null', async () => {
-    const { getUpdateMessage } = await import('../src/utils/version-checker.js')
+    const { getUpdateMessage } = await import(freshModule())
 
     const result = getUpdateMessage({
       currentVersion: '0.0.2',
@@ -75,7 +77,7 @@ describe('getUpdateMessage', () => {
   })
 
   it('hasUpdate=true 但 latestVersion=null 时应该返回 null', async () => {
-    const { getUpdateMessage } = await import('../src/utils/version-checker.js')
+    const { getUpdateMessage } = await import(freshModule())
 
     const result = getUpdateMessage({
       currentVersion: '0.0.1',
@@ -90,17 +92,13 @@ describe('getUpdateMessage', () => {
 // ===================== checkForUpdate 测试 =====================
 
 describe('checkForUpdate', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-  })
-
   it('网络请求成功时应该返回版本信息', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ version: '1.0.0' }),
     })
 
-    const { checkForUpdate } = await import('../src/utils/version-checker.js')
+    const { checkForUpdate } = await import(freshModule())
     const result = await checkForUpdate()
 
     expect(result.currentVersion).toBeTruthy()
@@ -111,7 +109,7 @@ describe('checkForUpdate', () => {
   it('网络请求失败时应该优雅处理', async () => {
     mockFetch.mockRejectedValue(new Error('Network error'))
 
-    const { checkForUpdate } = await import('../src/utils/version-checker.js')
+    const { checkForUpdate } = await import(freshModule())
     const result = await checkForUpdate()
 
     expect(result.currentVersion).toBeTruthy()
@@ -125,7 +123,7 @@ describe('checkForUpdate', () => {
       status: 404,
     })
 
-    const { checkForUpdate } = await import('../src/utils/version-checker.js')
+    const { checkForUpdate } = await import(freshModule())
     const result = await checkForUpdate()
 
     expect(result.latestVersion).toBeNull()
@@ -136,56 +134,47 @@ describe('checkForUpdate', () => {
 // ===================== autoUpdate 测试 =====================
 
 describe('autoUpdate', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-  })
-
   it('有新版本时应该执行 npm install 并返回 true', async () => {
-    const mockExec = vi.fn((_cmd: string, _opts: any, cb: any) => cb(null, '', ''))
-    vi.doMock('child_process', () => ({ exec: mockExec }))
+    const mockExec = vi.fn().mockResolvedValue('')
 
     mockFetch.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ version: '99.0.0' }),
     })
 
-    const { autoUpdate } = await import('../src/utils/version-checker.js')
-    const result = await autoUpdate()
+    const { autoUpdate } = await import(freshModule())
+    const result = await autoUpdate(mockExec)
 
     expect(result).toBe(true)
     expect(mockExec).toHaveBeenCalledWith(
       'npm install -g @lcxyxz/lccode@latest',
-      { timeout: 60000 },
-      expect.any(Function)
+      { timeout: 60000 }
     )
   })
 
   it('没有新版本时应该返回 false', async () => {
-    vi.doMock('child_process', () => ({ exec: vi.fn() }))
-
     const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '../package.json'), 'utf-8'))
     mockFetch.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ version: pkg.version }),
     })
 
-    const { autoUpdate } = await import('../src/utils/version-checker.js')
+    const { autoUpdate } = await import(freshModule())
     const result = await autoUpdate()
 
     expect(result).toBe(false)
   })
 
   it('npm install 失败时应该返回 false', async () => {
-    const mockExec = vi.fn((_cmd: string, _opts: any, cb: any) => cb(new Error('npm error'), '', ''))
-    vi.doMock('child_process', () => ({ exec: mockExec }))
+    const mockExec = vi.fn().mockRejectedValue(new Error('npm error'))
 
     mockFetch.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ version: '99.0.0' }),
     })
 
-    const { autoUpdate } = await import('../src/utils/version-checker.js')
-    const result = await autoUpdate()
+    const { autoUpdate } = await import(freshModule())
+    const result = await autoUpdate(mockExec)
 
     expect(result).toBe(false)
   })

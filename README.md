@@ -2,7 +2,7 @@
 
 一个基于 Ink 构建的极简终端 AI 编程助手，支持 DeepSeek 和 Mimo 两家 AI 服务提供商。
 
-**版本**: 0.1.1 | **协议**: MIT | **Node.js**: >= 18
+**版本**: 0.1.2 | **协议**: MIT | **运行时**: Bun 编译的独立单文件程序（用户无需安装 Bun / Node.js）
 
 ## 功能特性
 
@@ -140,8 +140,8 @@ AI 会优先使用专用工具完成任务，确保操作安全高效：
 
 ### 系统要求
 
-- **Node.js**: >= 18
-- **操作系统**: macOS / Linux / Windows
+- **操作系统**: macOS / Linux / Windows（x64 / ARM64）
+- **安装前提**: Node.js + npm（仅用于安装；程序本身是独立二进制，运行时**不依赖** Node.js 或 Bun）
 
 ### 安装（推荐）
 
@@ -157,21 +157,43 @@ npm install -g @lcxyxz/lccode
 lccode
 ```
 
-### 从源码安装
+> 安装包内已包含 win32-x64、linux-x64、darwin-arm64、darwin-x64 四个平台的预编译二进制，
+> 安装时不会下载任何运行时，装完即用。
+
+### 使用流程
+
+1. **首次启动**：未检测到配置文件时自动进入交互式配置向导，输入 API Key 并选择服务商
+2. **日常使用**：直接输入需求即可与 AI 对话，支持 `@` 文件路径补全和 `/` 斜杠命令
+3. **自动更新**：启动时会自动检查 npm 上的新版本，发现新版本会自动执行
+   `npm install -g @lcxyxz/lccode@latest` 完成更新，重启程序后生效
+
+### 从源码安装（开发模式）
 
 ```bash
 git clone https://github.com/lcxyxz/lccode.git
 cd lccode
-npm install
-npm run build
-npm link
+curl -fsSL https://bun.sh/install | bash   # 安装 Bun（安装过一次可跳过）
+bun install
+bun run start    # 开发模式直接运行源码
 ```
 
-之后在任意目录下直接运行：
+### 发布流程
 
 ```bash
-lccode
+bun run test         # 运行测试（bun test）
+bun run build:all    # 交叉编译四个平台的单文件二进制
+npm publish          # 发布（prepublishOnly 会自动执行 build:all）
 ```
+
+常用构建命令：
+
+| 命令 | 说明 |
+|------|------|
+| `bun run start` | 开发模式，直接运行 TS 源码 |
+| `bun run build` | 编译当前平台单文件到 `dist/bin/` |
+| `bun run build:all` | 交叉编译全部平台（win32-x64 / linux-x64 / darwin-arm64 / darwin-x64） |
+| `bun run test` | 运行测试 |
+| `bun run typecheck` | TypeScript 类型检查 |
 
 ### 配置
 
@@ -260,6 +282,8 @@ EOF
 
 ```
 lccode/
+├── scripts/
+│   └── build.ts                 # 构建脚本：交叉编译 + 生成模板/版本模块
 ├── src/
 │   ├── agent/                    # AI 核心逻辑
 │   │   ├── agent.ts              # Agent 主逻辑
@@ -273,7 +297,8 @@ lccode/
 │   │   ├── prompts/              # 提示词模板
 │   │   │   ├── loader.ts         # 模板加载器
 │   │   │   ├── prompt-template.ts # 模板引擎
-│   │   │   └── templates/        # 模板文件
+│   │   │   ├── templates/        # 模板源文件（.md）
+│   │   │   └── templates.generated.ts  # 构建时生成的模板模块（勿手改）
 │   │   ├── skill/                # 技能系统
 │   │   │   ├── loader.ts         # 技能文件加载
 │   │   │   ├── skill-adapter.ts  # 技能适配为工具
@@ -321,12 +346,13 @@ lccode/
 │   │   ├── language.ts           # 语言检测
 │   │   ├── logger.ts             # 日志工具
 │   │   ├── sandbox.ts            # 沙箱权限管理
-│   │   └── version-checker.ts    # 版本检查
+│   │   ├── version-checker.ts    # 版本检查
+│   │   └── version.generated.ts  # 构建时生成的版本模块（勿手改）
 │   ├── config.ts                 # 配置加载
 │   ├── app.tsx                   # 主应用组件
 │   └── cli.tsx                   # CLI 入口
-├── test/                         # 测试文件
-└── dist/                         # 构建输出
+├── test/                         # 测试文件（bun test）
+└── dist/bin/                     # 构建产物：各平台单文件二进制 + 启动器
 ```
 
 ## 任务清单
@@ -343,13 +369,13 @@ lccode/
 
 ## 技术栈
 
-- **运行时**: Node.js + TypeScript
+- **运行时**: Bun（编译为各平台独立单文件二进制，用户侧零依赖）
 - **UI 框架**: Ink (React for CLI)
 - **AI 服务**: DeepSeek、Mimo
 - **协议支持**: MCP (Model Context Protocol)
-- **构建工具**: TypeScript + tsx
-- **测试**: Vitest
-- **主要依赖**:
+- **构建工具**: Bun build（`--compile` 交叉编译）
+- **测试**: bun test
+- **主要依赖**（仅构建期需要，已编译进二进制）:
   - `@modelcontextprotocol/sdk`: ^1.29.0
   - `cli-highlight`: ^2.1.11
   - `diff`: ^9.0.0
@@ -362,6 +388,18 @@ lccode/
 **Q: 启动时报 `Raw mode is not supported` 错误？**
 
 程序需要在交互式终端中运行。请直接在终端中执行 `lccode`，不要通过管道或其他非 TTY 方式调用。
+
+**Q: 安装后需要安装 Node.js / Bun 吗？**
+
+不需要。npm 包内已包含各平台预编译的独立二进制，`lccode` 命令直接运行，不依赖任何运行时。（`npm install` 本身需要 Node.js，这是 npm 的安装前提）
+
+**Q: Windows 上第一次启动有点慢？**
+
+新版已改为单文件二进制，首次启动只需扫描一个文件，比之前的几百个 JS 文件快很多。如果仍然觉得慢，可以在 Windows 安全中心为 npm 全局安装目录（`%APPDATA%\npm`）添加排除项。
+
+**Q: 程序如何更新？**
+
+启动时自动检查 npm 上的新版本，发现新版本会自动执行 `npm install -g @lcxyxz/lccode@latest`，重启后生效。也可以手动执行该命令更新。
 
 **Q: 如何更换模型或 API Key？**
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { loadConfig } from './config.js'
 import type { LccodeConfig } from './config.js'
 import type { ProviderType } from './types/shared.js'

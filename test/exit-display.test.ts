@@ -6,7 +6,7 @@
  * - 退出命令的完整流程（processCommand → EXIT action）
  * - process.on("exit") 终端清理回调
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'bun:test'
 import { processCommand } from '../src/frontend/commands.js'
 import { ExitScreen } from '../src/frontend/components/ExitScreen.js'
 import type { TokenUsage } from '../src/types/index.js'
