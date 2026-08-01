@@ -66,6 +66,54 @@ vi.mock('../src/services/command-executor.js', () => ({
   getPlatform: vi.fn().mockReturnValue('linux'),
 }))
 
+// 模拟文件工具
+vi.mock('../src/agent/tools/file-tools.js', () => {
+  return {
+    readFileTool: {
+      name: 'read_file',
+      description: '读取文件',
+      parameters: [],
+      execute: async () => mockReadFile(),
+    },
+    writeFileTool: {
+      name: 'write_file',
+      description: '写入文件',
+      parameters: [],
+      execute: async () => mockWriteFile(),
+    },
+    editFileTool: {
+      name: 'edit_file',
+      description: '编辑文件',
+      parameters: [],
+      execute: async () => ({ success: true, output: '已编辑文件' }),
+    },
+    deleteFileTool: {
+      name: 'delete_file',
+      description: '删除文件',
+      parameters: [],
+      execute: async () => ({ success: true, output: '已删除文件' }),
+    },
+    deleteDirectoryTool: {
+      name: 'delete_directory',
+      description: '删除目录',
+      parameters: [],
+      execute: async () => ({ success: true, output: '已删除目录' }),
+    },
+    searchTool: {
+      name: 'search',
+      description: '搜索文件',
+      parameters: [],
+      execute: async () => ({ success: true, output: '搜索结果' }),
+    },
+    addDirTool: {
+      name: 'add_dir',
+      description: '创建目录',
+      parameters: [],
+      execute: async () => ({ success: true, output: '已创建目录' }),
+    },
+  }
+})
+
 // 模拟 MCP 管理器
 vi.mock('../src/agent/mcp/manager.js', () => {
   return {
