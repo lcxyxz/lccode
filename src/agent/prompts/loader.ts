@@ -1,22 +1,18 @@
 /**
  * 提示词模板加载器
- * 从 .md 文件读取模板内容，支持变量插值
+ * 模板由 scripts/build.ts 预编译进 templates.generated.ts，
+ * 编译单文件时自动打进产物，开发模式同样可用，无需运行时读盘
  */
 
-import { readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-const TEMPLATES_DIR = join(__dirname, 'templates')
+import { TEMPLATES } from './templates.generated.js'
 
 const cache: Record<string, string> = {}
 
 function load(name: string): string {
   if (cache[name] === undefined) {
-    cache[name] = readFileSync(join(TEMPLATES_DIR, `${name}.md`), 'utf-8')
+    const content = TEMPLATES[name]
+    if (content === undefined) throw new Error(`Template not found: ${name}`)
+    cache[name] = content
   }
   return cache[name]
 }

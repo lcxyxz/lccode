@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { exec } from 'child_process'
+import { LCCODE_VERSION } from './version.generated.js'
 
 function execAsync(command: string, options?: { timeout?: number }): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -12,18 +13,11 @@ function execAsync(command: string, options?: { timeout?: number }): Promise<str
 }
 
 const NPM_REGISTRY = 'https://registry.npmjs.org/@lcxyxz/lccode/latest'
-const PACKAGE_JSON_PATH = join(import.meta.dirname, '../../package.json')
 
 let cachedResult: { currentVersion: string; latestVersion: string | null; hasUpdate: boolean } | null = null
 
 export function getCurrentVersion(): string {
-  try {
-    const raw = readFileSync(PACKAGE_JSON_PATH, 'utf-8')
-    const data = JSON.parse(raw)
-    return data.version || '0.0.0'
-  } catch {
-    return '0.0.0'
-  }
+  return LCCODE_VERSION
 }
 
 function parseVersion(version: string): number[] {
@@ -70,12 +64,14 @@ export function getUpdateMessage(result: { currentVersion: string; latestVersion
   return `发现新版本 v${result.latestVersion}，正在自动更新...`
 }
 
-export async function autoUpdate(): Promise<boolean> {
+export async function autoUpdate(
+  execFn: (command: string, options?: { timeout?: number }) => Promise<string> = execAsync
+): Promise<boolean> {
   const result = await checkForUpdate()
   if (!result.hasUpdate || !result.latestVersion) return false
 
   try {
-    await execAsync('npm install -g @lcxyxz/lccode@latest', {
+    await execFn('npm install -g @lcxyxz/lccode@latest', {
       timeout: 60000,
     })
     return true

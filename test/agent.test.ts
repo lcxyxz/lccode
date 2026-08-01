@@ -14,7 +14,7 @@
  *
  * 使用 vi.mock 模拟外部依赖（LLM Provider、命令执行器、MCP）
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'bun:test'
 
 // ===================== Mock 设置 =====================
 

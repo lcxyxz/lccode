@@ -2,10 +2,8 @@
   "name": "@lcxyxz/lccode",
   "version": "0.1.1",
   "description": "一款由桂电找不到工作的学生郁郁寡欢的情况下开发的一个agent助手",
-  "main": "./dist/app.js",
-  "types": "./dist/app.d.ts",
   "bin": {
-    "lccode": "./dist/cli.js"
+    "lccode": "./dist/bin/lccode.js"
   },
   "type": "module",
   "files": [
@@ -14,11 +12,12 @@
     "README.md"
   ],
   "scripts": {
-    "start": "tsx src/cli.tsx",
-    "build": "tsc && rm -rf dist/agent/prompts/templates && cp -r src/agent/prompts/templates dist/agent/prompts/",
-    "prepublishOnly": "npm run build",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "start": "bun src/cli.tsx",
+    "build": "bun scripts/build.ts",
+    "build:all": "bun scripts/build.ts --all",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "prepublishOnly": "bun run build:all"
   },
   "keywords": [
     "ai",
@@ -42,10 +41,14 @@
   "author": "lcxyxz",
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "bun": ">=1.2.14"
   },
-  "dependencies": {
+  "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/bun": "^1.3.0",
+    "@types/marked-terminal": "^6.1.1",
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.17",
     "cli-highlight": "^2.1.11",
     "diff": "^9.0.0",
     "ink": "^7.1.0",
@@ -53,15 +56,8 @@
     "marked": "9.0.3",
     "marked-terminal": "^7.3.0",
     "openai": "^6.45.0",
-    "react": "^19.2.7"
-  },
-  "devDependencies": {
-    "@types/marked-terminal": "^6.1.1",
-    "@types/node": "^26.0.0",
-    "@types/react": "^19.2.17",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.22.4",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "react": "^19.2.7",
+    "react-devtools-core": "^7.0.1",
+    "typescript": "^6.0.3"
   }
 }

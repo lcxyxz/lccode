@@ -7,13 +7,9 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "types": ["node"]
+    "noEmit": true,
+    "types": ["bun"]
   },
-  "include": ["src"],
+  "include": ["src", "scripts"],
   "exclude": ["node_modules", "dist"]
 }

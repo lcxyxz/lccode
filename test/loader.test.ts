@@ -7,7 +7,7 @@
  * - getRetryMessage: 获取重试消息
  * - PARSE_HINTS: 解析提示
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'bun:test'
 import { render, getSystemPrompt, getRetryMessage, PARSE_HINTS } from '../src/agent/prompts/loader.js'
 
 // ===================== render 测试 =====================

@@ -6,7 +6,7 @@
  * - 斜杠命令: /exit, /help, /new, /mcp
  * - 非斜杠命令: 作为 LLM 查询
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'bun:test'
 import { processCommand, SLASH_COMMANDS, COMMANDS } from '../src/frontend/commands.js'
 import type { CommandContext } from '../src/frontend/commands.js'
 

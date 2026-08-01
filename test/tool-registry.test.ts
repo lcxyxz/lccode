@@ -9,7 +9,7 @@
  * - setActiveFilter / getActiveFilter: 工具过滤器
  * - formatToolDescriptions: 生成工具描述文本
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'bun:test'
 import { ToolRegistry, type Tool, type ToolResult } from '../src/agent/tools/tool-registry.js'
 
 // ===================== 辅助函数 =====================
