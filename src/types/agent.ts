@@ -6,6 +6,8 @@ export interface AgentEvent {
   type: 'thinking' | 'command' | 'response' | 'error' | 'token_usage' | 'diff_preview'
   content: string
   metadata?: {
+    /** 轮次编号（1 开始），用于前端按轮分组展示 */
+    round?: number
     command?: string
     commandOutput?: string
     success?: boolean

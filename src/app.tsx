@@ -41,7 +41,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
     sections, input, llmStatus, tokenUsage, handleSubmit, handleChange, cancelAgent,
     showSuggestions, filteredCommands, selectedIndex,
     showFileSuggestions, filteredFiles, fileSelectedIndex,
-    isExiting, branchVersion,
+    isExiting, branchVersion, showDetails,
   } = useTerminal(onExit)
 
   if (isExiting) {
@@ -52,7 +52,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
     <Box flexDirection="column" height="100%">
       <Header />
       <Box flexDirection="column" flexGrow={1}>
-        <OutputLines sections={sections} />
+        <OutputLines sections={sections} showDetails={showDetails} />
       </Box>
       {showSuggestions && filteredCommands.length > 0 && (
         <CommandSuggestion commands={filteredCommands} selectedIndex={selectedIndex} />
@@ -67,7 +67,7 @@ function AppContent({ onExit }: { onExit?: () => void }) {
         onCancel={cancelAgent}
         llmStatus={llmStatus}
       />
-      <StatusLine llmStatus={llmStatus} modelName={process.env.LCCODE_MODEL || 'AI'} tokenUsage={tokenUsage} />
+      <StatusLine llmStatus={llmStatus} modelName={process.env.LCCODE_MODEL || 'AI'} tokenUsage={tokenUsage} showDetails={showDetails} />
       <InfoLine branchVersion={branchVersion} />
     </Box>
   )

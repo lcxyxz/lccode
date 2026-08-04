@@ -23,9 +23,14 @@ export function InfoLine({ branchVersion }: InfoLineProps) {
 
   return (
     <Box justifyContent="flex-start">
-      <Text color="cyan">
-        {folderName}{gitBranch ? `:${gitBranch}` : ''}
+      <Text color="cyan" bold>
+        {folderName}
       </Text>
+      {gitBranch && (
+        <Text color="yellow">
+          :{gitBranch}
+        </Text>
+      )}
     </Box>
   )
 }

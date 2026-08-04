@@ -11,19 +11,19 @@ interface InputLineProps {
 }
 
 export function InputLine({ value, onChange, onSubmit, onCancel, llmStatus }: InputLineProps) {
-  const promptColor = llmStatus === 'loading' ? 'yellow' : 'green'
-  const statusIcon = llmStatus === 'loading' ? '...' : llmStatus === 'error' ? '!' : '>'
+  const promptColor = llmStatus === 'loading' ? 'yellow' : llmStatus === 'error' ? 'red' : 'green'
+  const promptIcon = llmStatus === 'loading' ? '…' : '❯'
 
   return (
     <Box>
-      <Text color={promptColor} bold>{statusIcon} </Text>
+      <Text color={promptColor} bold>{promptIcon} </Text>
       <TextInput
         value={value}
         onChange={onChange}
         onSubmit={onSubmit}
       />
       {llmStatus === 'loading' && onCancel && (
-        <Text color="gray"> (按Esc取消)</Text>
+        <Text color="gray" dimColor> (按 Esc 取消)</Text>
       )}
     </Box>
   )

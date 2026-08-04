@@ -233,8 +233,4 @@ Use `sandbox(action="list")` to view current status.
 
 Tools with the `skill__` prefix are Skill tools. When you call one, it returns the full skill instructions. You MUST follow them strictly.
 
-## Conversation History
-
-{{history}}
-
 Based on the latest message in the history, decide the next action and output the corresponding JSON.

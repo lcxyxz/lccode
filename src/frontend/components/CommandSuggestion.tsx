@@ -11,7 +11,7 @@ export function CommandSuggestion({
   selectedIndex: number
 }) {
   return (
-    <Box flexDirection="column" borderTop={true} borderColor="gray" paddingTop={1} marginBottom={1}>
+    <Box flexDirection="column" borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray" paddingTop={1} marginBottom={1}>
       <Text color="gray" dimColor>↑↓ Navigate │ Tab Select │ Esc Dismiss</Text>
       {commands.map((cmd, i) => (
         <Box key={cmd}>

@@ -9,7 +9,7 @@ export function Header() {
   const logoLines = logo.split('\n')
 
   return (
-    <Box flexDirection="column" marginBottom={1}>
+    <Box flexDirection="column" marginBottom={1} borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray" paddingBottom={1}>
       {logoLines.map((line, i) => (
         <Text key={i} color="cyan" bold>{line}</Text>
       ))}

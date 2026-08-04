@@ -4,10 +4,11 @@ import type { LLMStatus, TokenUsage } from '../../types/index.js'
 
 interface LLMOutputActions {
   addMessage: (content: string, color?: string) => void
-  addCommandResult: (command: string, output: string, success: boolean) => void
-  addResponse: (content: string) => void
-  addDiffPreview: (filePath: string, language: string, lines: any[]) => void
-  resetCommandList: () => void
+  startQuery: () => void
+  addRoundThinking: (round: number | undefined, content: string) => void
+  addRoundCommand: (round: number | undefined, command: string, output: string, success: boolean) => void
+  addRoundResponse: (round: number | undefined, content: string) => void
+  addRoundDiff: (round: number | undefined, filePath: string, language: string, lines: any[]) => void
   onGitCommand?: () => void
 }
 
@@ -29,7 +30,7 @@ export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutp
       return
     }
 
-    actionsRef.current.resetCommandList()
+    actionsRef.current.startQuery()
     setLlmStatus('loading')
     let cancelled = false
 
@@ -37,6 +38,7 @@ export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutp
       for await (const event of agent.processInput(query)) {
         switch (event.type) {
           case 'thinking':
+            actionsRef.current.addRoundThinking(event.metadata?.round, event.content ?? '')
             break
           case 'command':
             if (event.metadata) {
@@ -44,15 +46,16 @@ export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutp
               if (/git\s+(checkout|switch|branch)\b/.test(cmd)) {
                 actionsRef.current.onGitCommand?.()
               }
-              actionsRef.current.addCommandResult(
-                event.metadata.command ?? '',
+              actionsRef.current.addRoundCommand(
+                event.metadata.round,
+                cmd,
                 event.metadata.commandOutput ?? '',
                 event.metadata.success ?? false,
               )
             }
             break
           case 'response':
-            actionsRef.current.addResponse(event.content ?? '')
+            actionsRef.current.addRoundResponse(event.metadata?.round, event.content ?? '')
             break
           case 'error':
             if (event.content === '对话已取消') { cancelled = true }
@@ -69,7 +72,8 @@ export function useLLM(agentRef: React.RefObject<Agent | null>, actions: LLMOutp
             break
           case 'diff_preview':
             if (event.diffPreview) {
-              actionsRef.current.addDiffPreview(
+              actionsRef.current.addRoundDiff(
+                event.metadata?.round,
                 event.diffPreview.filePath,
                 event.diffPreview.language,
                 event.diffPreview.lines,

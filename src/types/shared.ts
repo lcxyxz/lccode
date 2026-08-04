@@ -1,5 +1,5 @@
 /** 输出区块类型 */
-export type SectionType = 'message' | 'command' | 'thinking' | 'response' | 'diff_preview'
+export type SectionType = 'message' | 'round'
 
 /** 差异行类型 */
 export type DiffLineType = 'added' | 'removed' | 'unchanged'
@@ -33,6 +33,10 @@ export interface OutputSection {
   }
   /** 关联的命令结果列表 */
   commands?: CommandEntry[]
+  /** round 卡片：轮次编号 */
+  round?: number
+  /** round 卡片：思考内容 */
+  thinking?: string
 }
 
 /** 命令处理后的动作指令 */

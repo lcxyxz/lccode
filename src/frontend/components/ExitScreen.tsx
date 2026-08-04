@@ -6,11 +6,19 @@ export function ExitScreen() {
     <Box flexDirection="column">
       <Header />
       <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-        <Box flexDirection="column" alignItems="center" gap={1}>
+        <Box
+          flexDirection="column"
+          alignItems="center"
+          gap={1}
+          borderStyle="round"
+          borderColor="cyan"
+          paddingX={4}
+          paddingY={2}
+        >
           <Text color="cyan" bold>Goodbye!</Text>
           <Text color="gray">Thanks for using lccode</Text>
         </Box>
-        <Box  width={4} height={2}></Box>
+        <Box width={4} height={2}></Box>
       </Box>
     </Box>
   )

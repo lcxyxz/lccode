@@ -5,9 +5,10 @@ interface StatusLineProps {
   llmStatus: LLMStatus
   modelName?: string
   tokenUsage?: TokenUsage
+  showDetails?: boolean
 }
 
-export function StatusLine({ llmStatus, modelName, tokenUsage }: StatusLineProps) {
+export function StatusLine({ llmStatus, modelName, tokenUsage, showDetails }: StatusLineProps) {
   const statusColor = {
     idle: 'gray',
     loading: 'yellow',
@@ -28,18 +29,20 @@ export function StatusLine({ llmStatus, modelName, tokenUsage }: StatusLineProps
   }
 
   return (
-    <Box justifyContent="space-between" paddingTop={1}>
-      <Text color="gray">
-        {modelName || 'AI'} │ Ctrl+C Exit
-      </Text>
+    <Box justifyContent="space-between" paddingTop={1} borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray">
+      <Box>
+        <Text color="cyan" bold>{modelName || 'AI'}</Text>
+        <Text color="gray"> │ Tab {showDetails ? '收起详情' : '展开详情'} │ Ctrl+C Exit</Text>
+      </Box>
       <Box>
         {tokenUsage && tokenUsage.totalTokens > 0 && (
-          <Text color="gray">
+          <Text color="gray" dimColor>
             Prompt: {formatTokens(tokenUsage.promptTokens)} │ Completion: {formatTokens(tokenUsage.completionTokens)} │ Total: {formatTokens(tokenUsage.totalTokens)} │{' '}
           </Text>
         )}
         <Text color={statusColor}>
-          {statusIcon} {llmStatus === 'loading' ? 'Thinking...' :
+          <Text bold>{statusIcon}</Text>{' '}
+          {llmStatus === 'loading' ? 'Thinking...' :
            llmStatus === 'done' ? 'Ready' :
            llmStatus === 'error' ? 'Error' : 'Idle'}
         </Text>

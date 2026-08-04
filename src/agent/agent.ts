@@ -31,7 +31,6 @@ export class Agent {
   private mcpManager: McpManager
   private skillManager: SkillManager
   private chatHistory: ChatMessage[] = []
-  private currentQueryStartIndex = 0
   private currentQuery = ''
   private logger: Logger
   private abortController: AbortController | null = null
@@ -130,18 +129,12 @@ export class Agent {
   }
 
   private buildMessages(): ChatMessage[] {
-    const currentMessages = this.chatHistory.slice(this.currentQueryStartIndex)
-    const systemPrompt = buildSystemPrompt(this.registry, {
-      history: this.chatHistory,
-    })
+    const systemPrompt = buildSystemPrompt(this.registry)
     
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
+      ...this.chatHistory,
     ]
-    
-    for (const msg of currentMessages) {
-      messages.push(msg)
-    }
 
     // 追加语言强制指令（紧跟最新用户消息之后）
     messages.push({ role: 'system', content: this.buildLanguageInstruction() })
@@ -169,11 +162,9 @@ export class Agent {
     let round = 0
     let parseRetries = 0
     
-    this.currentQueryStartIndex = this.chatHistory.length
+    this.abortController = new AbortController()
     this.currentQuery = query
     this.chatHistory.push({ role: 'user', content: query })
-
-    this.abortController = new AbortController()
 
     while (round < maxRounds) {
       round++
@@ -196,7 +187,7 @@ export class Agent {
       this.logger.debug('LLM response:', llmResult.response)
 
       if (llmResult.thinking) {
-        yield { type: 'thinking', content: llmResult.thinking }
+        yield { type: 'thinking', content: llmResult.thinking, metadata: { round } }
       }
 
       if (llmResult.usage) {
@@ -225,7 +216,7 @@ export class Agent {
 
         // 超过重试次数，返回原始响应
         this.pushAssistant(llmResult.response)
-        yield { type: 'response', content: llmResult.response }
+        yield { type: 'response', content: llmResult.response, metadata: { round } }
         return
       }
 
@@ -233,12 +224,14 @@ export class Agent {
       parseRetries = 0
       const output = result.output
 
-      yield { type: 'thinking', content: output.thought }
+      if (!llmResult.thinking && output.thought) {
+        yield { type: 'thinking', content: output.thought, metadata: { round } }
+      }
 
       // 处理最终答案
       if (isFinalAnswerOutput(output)) {
         this.pushAssistant(llmResult.response)
-        yield { type: 'response', content: output.answer }
+        yield { type: 'response', content: output.answer, metadata: { round } }
         this.logger.logConversation(query, output.answer, round)
         return
       }
@@ -250,7 +243,7 @@ export class Agent {
           responseContent += '\n\n选项：\n' + output.options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')
         }
         this.pushAssistant(llmResult.response)
-        yield { type: 'response', content: responseContent }
+        yield { type: 'response', content: responseContent, metadata: { round } }
         this.logger.logConversation(query, responseContent, round)
         return
       }
@@ -259,7 +252,7 @@ export class Agent {
       if (isErrorOutput(output)) {
         const errorContent = `错误：${output.error}`
         this.pushAssistant(llmResult.response)
-        yield { type: 'response', content: errorContent }
+        yield { type: 'response', content: errorContent, metadata: { round } }
         this.logger.logConversation(query, errorContent, round)
         return
       }
@@ -292,6 +285,7 @@ export class Agent {
           type: 'command',
           content: `$ ${commandStr}`,
           metadata: {
+            round,
             command: commandStr,
             commandOutput: execResult.output,
             success: execResult.success,
@@ -306,6 +300,7 @@ export class Agent {
             yield {
               type: 'diff_preview',
               content: '',
+              metadata: { round },
               diffPreview: execResult.diff,
             }
           }
@@ -332,7 +327,6 @@ export class Agent {
 
   clearHistory() {
     this.chatHistory = []
-    this.currentQueryStartIndex = 0
     this.currentQuery = ''
   }
 

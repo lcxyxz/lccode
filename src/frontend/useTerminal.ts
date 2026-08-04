@@ -28,8 +28,8 @@ import type { LLMStatus } from '../types/index.js'
 export function useTerminal(onExit?: () => void) {
   // ==================== 核心 Hooks ====================
 
-  /** 输出管理：管理终端的输出内容（消息、命令结果、响应等） */
-  const { sections, addMessage, addCommandResult, addResponse, addDiffPreview, clearSections, resetCommandList } = useOutput()
+  /** 输出管理：管理终端的输出内容（消息、轮次卡片等） */
+  const { sections, addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, clearSections, startQuery, showDetails, toggleDetails } = useOutput()
 
   /** 命令历史：支持上下箭头浏览历史命令 */
   const { addHistory, navigateUp } = useCommandHistory()
@@ -60,16 +60,17 @@ export function useTerminal(onExit?: () => void) {
   // ==================== Ref 更新（避免闭包问题）====================
 
   /** 输出操作的 Ref，确保 useInput 回调能访问最新的输出函数 */
-  const actionsRef = useRef({ addMessage, addCommandResult, addResponse, addDiffPreview, addHistory, clearSections, resetCommandList })
-  actionsRef.current = { addMessage, addCommandResult, addResponse, addDiffPreview, addHistory, clearSections, resetCommandList }
+  const actionsRef = useRef({ addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, addHistory, clearSections, startQuery, toggleDetails })
+  actionsRef.current = { addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, addHistory, clearSections, startQuery, toggleDetails }
 
   /** LLM 通信 */
   const { callAgent, llmStatus, tokenUsage } = useLLM(agentRef, {
     addMessage: (c, color) => actionsRef.current.addMessage(c, color as any),
-    addCommandResult: (cmd, out, ok) => actionsRef.current.addCommandResult(cmd, out, ok),
-    addResponse: (c) => actionsRef.current.addResponse(c),
-    addDiffPreview: (fp, lang, lines) => actionsRef.current.addDiffPreview(fp, lang, lines),
-    resetCommandList: () => actionsRef.current.resetCommandList(),
+    startQuery: () => actionsRef.current.startQuery(),
+    addRoundThinking: (r, c) => actionsRef.current.addRoundThinking(r, c),
+    addRoundCommand: (r, cmd, out, ok) => actionsRef.current.addRoundCommand(r, cmd, out, ok),
+    addRoundResponse: (r, c) => actionsRef.current.addRoundResponse(r, c),
+    addRoundDiff: (r, fp, lang, lines) => actionsRef.current.addRoundDiff(r, fp, lang, lines),
     onGitCommand: () => setBranchVersion(v => v + 1),
   })
 
@@ -210,6 +211,12 @@ export function useTerminal(onExit?: () => void) {
       if (histCmd !== null) setInputRef.current(histCmd)
       return
     }
+
+    // Tab：切换详情模式（思考内容 / 工具执行结果展开）
+    if (key.tab) {
+      actionsRef.current.toggleDetails()
+      return
+    }
   })
 
   // 赋值 setInput 给 Ref，供 useInput 回调使用
@@ -225,7 +232,10 @@ export function useTerminal(onExit?: () => void) {
 
   return {
     // 输出相关
-    sections,        // 输出内容列表（消息、命令结果、响应等）
+    sections,        // 输出内容列表（消息、轮次卡片等）
+
+    // 详情模式相关
+    showDetails,     // 是否展开卡片详情（思考 / 执行结果）
 
     // 输入相关
     input,           // 当前输入框内容
