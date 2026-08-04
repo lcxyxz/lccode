@@ -87,7 +87,7 @@ export class ToolRegistry {
     })
     return tools.map(tool => {
       const params = tool.parameters
-        .map(p => `    - ${p.name} (${p.type}${p.required ? ', 必填' : ', 可选'}): ${p.description}`)
+        .map(p => `    - ${p.name} (${p.type}${p.required ? ', required' : ', optional'}): ${p.description}`)
         .join('\n')
       return `  - ${tool.name}: ${tool.description}\n${params}`
     }).join('\n\n')

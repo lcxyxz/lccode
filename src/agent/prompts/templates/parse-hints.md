@@ -1,147 +1,147 @@
 <!-- hint:noJsonTag -->
-请确保使用 <lccode_json>...</lccode_json> 标签包裹 JSON。
+Wrap the JSON in <lccode_json>...</lccode_json> tags.
 
-正确格式示例：
+Correct format example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "你的思考过程",
-  "answer": "你的答案内容"
+  "thought": "your thinking",
+  "answer": "your answer"
 }
 </lccode_json>
 
-注意：
-1. 必须使用 <lccode_json> 开始标签和 </lccode_json> 结束标签
-2. JSON 内容直接写在标签之间，不要使用反引号或其他代码块标记
+Note:
+1. Must use the opening <lccode_json> and closing </lccode_json> tags
+2. JSON goes directly between the tags, no backticks or code fences
 
 <!-- hint:jsonSyntax -->
-JSON 格式不正确，请检查：
-1. 所有字符串必须用双引号包裹
-2. 字符串中的双引号需要转义为 \"
-3. 字符串中的反斜杠需要转义为 \\
-4. 确保没有尾随逗号
-5. 确保没有未转义的换行符
+Invalid JSON format, check:
+1. All strings must be wrapped in double quotes
+2. Double quotes inside strings must be escaped as \"
+3. Backslashes inside strings must be escaped as \\
+4. No trailing commas
+5. No unescaped newlines
 
-正确示例：
+Correct example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "思考过程",
-  "answer": "第一行内容\\n第二行内容"
+  "thought": "thinking",
+  "answer": "first line\\nsecond line"
 }
 </lccode_json>
 
-常见错误：
-- answer 中包含未转义的反引号 ` -> 直接写文字
-- answer 中包含代码块 ``` -> 直接写文字
+Common mistakes:
+- Unescaped backtick ` in answer -> write plain text
+- Code fence ``` in answer -> write plain text
 
 <!-- hint:missingType -->
-必须包含 type 字段，且为字符串类型。
+The type field is required and must be a string.
 
-可选值：
-- "tool_call" - 调用工具
-- "final_answer" - 返回最终答案
-- "need_clarification" - 需要用户澄清
+Valid values:
+- "tool_call" - call a tool
+- "final_answer" - return the final answer
+- "need_clarification" - ask the user for clarification
 
-示例：
+Example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "思考过程",
-  "answer": "答案内容"
+  "thought": "thinking",
+  "answer": "answer content"
 }
 </lccode_json>
 
 <!-- hint:missingThought -->
-thought 字段是必填的，必须包含你的思考过程。
+The thought field is required and must contain your reasoning.
 
-示例：
+Example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "用户想要了解如何运行代码，我需要提供运行命令",
-  "answer": "运行方式：python test.py"
+  "thought": "User wants to know how to run the code, I need to provide the run command",
+  "answer": "Run: python test.py"
 }
 </lccode_json>
 
 <!-- hint:toolCallMissingTool -->
-tool_call 类型必须包含 tool 字段（工具名称）。
+The tool_call type must include the tool field (tool name).
 
-示例：
+Example:
 <lccode_json>
 {
   "type": "tool_call",
-  "thought": "需要执行 ls 命令查看文件",
+  "thought": "need to run ls to list files",
   "tool": "execute_command",
   "params": { "command": "ls -la" }
 }
 </lccode_json>
 
 <!-- hint:toolCallMissingParams -->
-tool_call 类型必须包含 params 字段（工具参数）。
+The tool_call type must include the params field (tool arguments).
 
-示例：
+Example:
 <lccode_json>
 {
   "type": "tool_call",
-  "thought": "需要写入文件",
+  "thought": "need to write a file",
   "tool": "write_file",
   "params": { 
     "file_path": "test.txt",
-    "content": "文件内容"
+    "content": "file content"
   }
 }
 </lccode_json>
 
 <!-- hint:finalAnswerMissingAnswer -->
-final_answer 类型必须包含 answer 字段（最终答案）。
+The final_answer type must include the answer field (final answer).
 
-示例：
+Example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "已完成任务",
-  "answer": "文件已创建成功"
+  "thought": "task done",
+  "answer": "File created successfully"
 }
 </lccode_json>
 
 <!-- hint:clarificationMissingQuestion -->
-need_clarification 类型必须包含 question 字段。
+The need_clarification type must include the question field.
 
-示例：
+Example:
 <lccode_json>
 {
   "type": "need_clarification",
-  "thought": "用户意图不明确",
-  "question": "请问你需要哪种操作？",
-  "options": ["查看文件", "执行命令"]
+  "thought": "user intent is unclear",
+  "question": "Which operation do you need?",
+  "options": ["view files", "run command"]
 }
 </lccode_json>
 
 <!-- hint:errorMissingError -->
-error 类型必须包含 error 字段。
+The error type must include the error field.
 
-示例：
+Example:
 <lccode_json>
 {
   "type": "error",
-  "thought": "发生了一个错误",
-  "error": "文件不存在"
+  "thought": "an error occurred",
+  "error": "file not found"
 }
 </lccode_json>
 
 <!-- hint:unknownType -->
-type 字段必须是以下值之一：
-- "tool_call" - 调用工具
-- "final_answer" - 返回最终答案
-- "need_clarification" - 需要用户澄清
-- "error" - 报告错误
+The type field must be one of:
+- "tool_call" - call a tool
+- "final_answer" - return the final answer
+- "need_clarification" - ask the user for clarification
+- "error" - report an error
 
-示例：
+Example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "思考过程",
-  "answer": "答案内容"
+  "thought": "thinking",
+  "answer": "answer content"
 }
 </lccode_json>

@@ -109,4 +109,4 @@ try {
 `
 
 writeFileSync(join(root, 'dist', 'bin', 'lccode.js'), shim)
-console.log('[build] dist/bin/lccode.js 启动器已生成')
+// console.log('[build] dist/bin/lccode.js 启动器已生成')

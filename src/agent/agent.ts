@@ -32,6 +32,7 @@ export class Agent {
   private skillManager: SkillManager
   private chatHistory: ChatMessage[] = []
   private currentQueryStartIndex = 0
+  private currentQuery = ''
   private logger: Logger
   private abortController: AbortController | null = null
   private config: AgentConfig
@@ -108,6 +109,26 @@ export class Agent {
     this.registry.setActiveFilter(activeNames)
   }
 
+  /**
+   * 检测用户提问语言：含中文字符视为中文，否则视为英文
+   */
+  private detectQueryLanguage(query: string): 'zh' | 'en' {
+    return /[\u4e00-\u9fff]/.test(query) ? 'zh' : 'en'
+  }
+
+  /**
+   * 构建硬性语言指令，强制最终答案与用户提问语言一致
+   * 以 system 消息追加在消息列表末尾，位于用户提问之后，约束最强
+   */
+  private buildLanguageInstruction(): string {
+    const lang = this.detectQueryLanguage(this.currentQuery)
+    const zhRule = '用户使用用中文提问，你必须以中文输出。'
+    const enRule = 'The user is asking in English, you MUST reply in English.'
+    return lang === 'zh'
+      ? `[HARD RULE] ${zhRule} final_answer.answer、need_clarification.question/options、error 等所有面向用户的内容都必须用中文，不允许用英文回答。thought 是内部思考，可继续用英文。`
+      : `[HARD RULE] ${enRule} All user-facing content (final_answer.answer, need_clarification.question/options, error) MUST be in English. thought is internal and may stay in English.`
+  }
+
   private buildMessages(): ChatMessage[] {
     const currentMessages = this.chatHistory.slice(this.currentQueryStartIndex)
     const systemPrompt = buildSystemPrompt(this.registry, {
@@ -121,6 +142,9 @@ export class Agent {
     for (const msg of currentMessages) {
       messages.push(msg)
     }
+
+    // 追加语言强制指令（紧跟最新用户消息之后）
+    messages.push({ role: 'system', content: this.buildLanguageInstruction() })
 
     return messages
   }
@@ -146,6 +170,7 @@ export class Agent {
     let parseRetries = 0
     
     this.currentQueryStartIndex = this.chatHistory.length
+    this.currentQuery = query
     this.chatHistory.push({ role: 'user', content: query })
 
     this.abortController = new AbortController()
@@ -308,6 +333,7 @@ export class Agent {
   clearHistory() {
     this.chatHistory = []
     this.currentQueryStartIndex = 0
+    this.currentQuery = ''
   }
 
   async disconnect(): Promise<void> {

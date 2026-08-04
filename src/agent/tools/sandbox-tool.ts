@@ -1,6 +1,6 @@
 /**
- * 沙箱权限管理工具
- * 允许用户配置 agent 的权限
+ * Sandbox permission management tool
+ * Allows users to configure agent permissions
  */
 import {
   ALL_PERMISSIONS,
@@ -18,43 +18,43 @@ import {
 import type { Tool, ToolResult } from './tool-registry.js'
 
 /**
- * 沙箱权限管理工具
+ * Sandbox permission management tool
  */
 export const sandboxTool: Tool = {
   name: 'sandbox',
-  description: `管理 agent 的沙箱权限。可以查看、启用、禁用权限，或使用预设配置。
-- list: 查看当前权限状态
-- enable: 启用指定权限
-- disable: 禁用指定权限
-- preset: 使用预设配置 (strict/relaxed/permissive)
-- reset: 重置为默认配置
-- add_allowed: 添加自定义允许的命令前缀
-- remove_allowed: 移除自定义允许的命令前缀
-- add_denied: 添加自定义拒绝的命令模式
-- remove_denied: 移除自定义拒绝的命令模式`,
+  description: `Manage agent sandbox permissions. View, enable, disable permissions, or use presets.
+- list: view current permission status
+- enable: enable a permission
+- disable: disable a permission
+- preset: apply a preset (strict/relaxed/permissive)
+- reset: reset to default config
+- add_allowed: add custom allowed command prefix
+- remove_allowed: remove custom allowed command prefix
+- add_denied: add custom denied command pattern
+- remove_denied: remove custom denied command pattern`,
   parameters: [
     {
       name: 'action',
       type: 'string',
-      description: '操作类型: list, enable, disable, preset, reset, add_allowed, remove_allowed, add_denied, remove_denied',
+      description: 'Action: list, enable, disable, preset, reset, add_allowed, remove_allowed, add_denied, remove_denied',
       required: true,
     },
     {
       name: 'permission',
       type: 'string',
-      description: '权限名称 (enable/disable 时必填): network, env_vars, process, system_dirs, user_dirs, parent_traversal, absolute_paths',
+      description: 'Permission name (required for enable/disable): network, env_vars, process, system_dirs, user_dirs, parent_traversal, absolute_paths',
       required: false,
     },
     {
       name: 'preset',
       type: 'string',
-      description: '预设配置名称 (preset 时必填): strict, relaxed, permissive',
+      description: 'Preset name (required for preset): strict, relaxed, permissive',
       required: false,
     },
     {
       name: 'pattern',
       type: 'string',
-      description: '命令模式 (add_allowed/add_denied 时必填)',
+      description: 'Command pattern (required for add_allowed/add_denied)',
       required: false,
     },
   ],
@@ -69,62 +69,62 @@ export const sandboxTool: Tool = {
         case 'list': {
           const summary = getSandboxConfigSummary()
           const permissionList = ALL_PERMISSIONS.map(p => {
-            const status = hasPermission(p) ? '✓ 启用' : '✗ 禁用'
+            const status = hasPermission(p) ? '✓ enabled' : '✗ disabled'
             return `  - ${p}: ${status} - ${PERMISSION_DESCRIPTIONS[p]}`
           }).join('\n')
 
           return {
             success: true,
-            output: `${summary}\n\n详细权限列表:\n${permissionList}\n\n使用示例:\n  - 启用网络权限: sandbox(enable, permission="network")\n  - 使用宽松预设: sandbox(preset, preset="relaxed")`,
+            output: `${summary}\n\nPermission list:\n${permissionList}\n\nExamples:\n  - Enable network: sandbox(enable, permission="network")\n  - Apply relaxed preset: sandbox(preset, preset="relaxed")`,
           }
         }
 
         case 'enable': {
           if (!permission) {
-            return { success: false, output: '', error: '请指定要启用的权限' }
+            return { success: false, output: '', error: 'Specify permission to enable' }
           }
           if (!ALL_PERMISSIONS.includes(permission)) {
-            return { success: false, output: '', error: `无效的权限: ${permission}。可用权限: ${ALL_PERMISSIONS.join(', ')}` }
+            return { success: false, output: '', error: `Invalid permission: ${permission}. Available: ${ALL_PERMISSIONS.join(', ')}` }
           }
 
           enablePermission(permission)
           return {
             success: true,
-            output: `已启用权限: ${permission}\n${PERMISSION_DESCRIPTIONS[permission]}`,
+            output: `Enabled permission: ${permission}\n${PERMISSION_DESCRIPTIONS[permission]}`,
           }
         }
 
         case 'disable': {
           if (!permission) {
-            return { success: false, output: '', error: '请指定要禁用的权限' }
+            return { success: false, output: '', error: 'Specify permission to disable' }
           }
           if (!ALL_PERMISSIONS.includes(permission)) {
-            return { success: false, output: '', error: `无效的权限: ${permission}。可用权限: ${ALL_PERMISSIONS.join(', ')}` }
+            return { success: false, output: '', error: `Invalid permission: ${permission}. Available: ${ALL_PERMISSIONS.join(', ')}` }
           }
 
           disablePermission(permission)
           return {
             success: true,
-            output: `已禁用权限: ${permission}\n${PERMISSION_DESCRIPTIONS[permission]}`,
+            output: `Disabled permission: ${permission}\n${PERMISSION_DESCRIPTIONS[permission]}`,
           }
         }
 
         case 'preset': {
           if (!preset || !['strict', 'relaxed', 'permissive'].includes(preset)) {
-            return { success: false, output: '', error: '请指定预设配置: strict, relaxed, permissive' }
+            return { success: false, output: '', error: 'Specify preset: strict, relaxed, permissive' }
           }
 
           setPreset(preset as 'strict' | 'relaxed' | 'permissive')
 
           const descriptions: Record<string, string> = {
-            strict: '严格模式 - 禁用所有敏感权限',
-            relaxed: '宽松模式 - 允许网络访问和环境变量',
-            permissive: '开放模式 - 允许除绝对路径外的所有权限',
+            strict: 'Strict - disable all sensitive permissions',
+            relaxed: 'Relaxed - allow network access and env vars',
+            permissive: 'Permissive - allow all except absolute paths',
           }
 
           return {
             success: true,
-            output: `已应用预设配置: ${preset}\n${descriptions[preset]}\n\n${getSandboxConfigSummary()}`,
+            output: `Applied preset: ${preset}\n${descriptions[preset]}\n\n${getSandboxConfigSummary()}`,
           }
         }
 
@@ -132,13 +132,13 @@ export const sandboxTool: Tool = {
           resetSandboxConfig()
           return {
             success: true,
-            output: `已重置为默认配置（严格模式）\n\n${getSandboxConfigSummary()}`,
+            output: `Reset to default config (strict)\n\n${getSandboxConfigSummary()}`,
           }
         }
 
         case 'add_allowed': {
           if (!pattern) {
-            return { success: false, output: '', error: '请指定要添加的命令前缀' }
+            return { success: false, output: '', error: 'Specify command prefix to add' }
           }
 
           const config = loadSandboxConfig()
@@ -149,13 +149,13 @@ export const sandboxTool: Tool = {
 
           return {
             success: true,
-            output: `已添加自定义允许命令前缀: ${pattern}\n当前允许前缀: ${config.allowedCommandPrefixes.join(', ')}`,
+            output: `Added custom allowed prefix: ${pattern}\nCurrent allowed prefixes: ${config.allowedCommandPrefixes.join(', ')}`,
           }
         }
 
         case 'remove_allowed': {
           if (!pattern) {
-            return { success: false, output: '', error: '请指定要移除的命令前缀' }
+            return { success: false, output: '', error: 'Specify command prefix to remove' }
           }
 
           const config2 = loadSandboxConfig()
@@ -164,13 +164,13 @@ export const sandboxTool: Tool = {
 
           return {
             success: true,
-            output: `已移除自定义允许命令前缀: ${pattern}\n当前允许前缀: ${config2.allowedCommandPrefixes.join(', ') || '无'}`,
+            output: `Removed custom allowed prefix: ${pattern}\nCurrent allowed prefixes: ${config2.allowedCommandPrefixes.join(', ') || 'none'}`,
           }
         }
 
         case 'add_denied': {
           if (!pattern) {
-            return { success: false, output: '', error: '请指定要添加的拒绝模式（正则表达式）' }
+            return { success: false, output: '', error: 'Specify denied pattern to add (regex)' }
           }
 
           const config3 = loadSandboxConfig()
@@ -181,13 +181,13 @@ export const sandboxTool: Tool = {
 
           return {
             success: true,
-            output: `已添加自定义拒绝模式: ${pattern}\n当前拒绝模式: ${config3.deniedCommandPatterns.join(', ')}`,
+            output: `Added custom denied pattern: ${pattern}\nCurrent denied patterns: ${config3.deniedCommandPatterns.join(', ')}`,
           }
         }
 
         case 'remove_denied': {
           if (!pattern) {
-            return { success: false, output: '', error: '请指定要移除的拒绝模式' }
+            return { success: false, output: '', error: 'Specify denied pattern to remove' }
           }
 
           const config4 = loadSandboxConfig()
@@ -196,15 +196,15 @@ export const sandboxTool: Tool = {
 
           return {
             success: true,
-            output: `已移除自定义拒绝模式: ${pattern}\n当前拒绝模式: ${config4.deniedCommandPatterns.join(', ') || '无'}`,
+            output: `Removed custom denied pattern: ${pattern}\nCurrent denied patterns: ${config4.deniedCommandPatterns.join(', ') || 'none'}`,
           }
         }
 
         default:
-          return { success: false, output: '', error: `不支持的操作: ${action}` }
+          return { success: false, output: '', error: `Unsupported action: ${action}` }
       }
     } catch (error: any) {
-      return { success: false, output: '', error: `操作失败: ${error.message}` }
+      return { success: false, output: '', error: `Operation failed: ${error.message}` }
     }
   },
 }

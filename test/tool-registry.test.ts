@@ -184,9 +184,9 @@ describe('ToolRegistry', () => {
       expect(desc).toContain('我的工具')
       // 参数描述也应该包含
       expect(desc).toContain('param1')
-      expect(desc).toContain('必填')
+      expect(desc).toContain('required')
       expect(desc).toContain('param2')
-      expect(desc).toContain('可选')
+      expect(desc).toContain('optional')
     })
 
     /**

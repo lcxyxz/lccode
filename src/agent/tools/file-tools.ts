@@ -5,7 +5,7 @@ import type { Tool, ToolResult, DiffLine } from './tool-registry.js'
 import { validatePath, getWorkspaceRoot } from '../../utils/sandbox.js'
 
 /**
- * 计算两段文本的差异
+ * Compute diff between two texts
  */
 function computeDiff(oldText: string, newText: string): DiffLine[] {
   const changes = diffLines(oldText, newText)
@@ -36,7 +36,7 @@ function computeDiff(oldText: string, newText: string): DiffLine[] {
 }
 
 /**
- * 根据文件扩展名获取语言
+ * Get language from file extension
  */
 function getLanguageFromPath(filePath: string): string {
   const ext = extname(filePath).toLowerCase()
@@ -79,28 +79,28 @@ function getLanguageFromPath(filePath: string): string {
 }
 
 /**
- * 读取文件内容
+ * Read file content
  */
 export const readFileTool: Tool = {
   name: 'read_file',
-  description: '读取指定文件的内容，支持行范围过滤',
+  description: 'Read file content, supports line range filtering',
   parameters: [
-    { name: 'file_path', type: 'string', description: '文件的绝对路径或相对路径', required: true },
-    { name: 'start_line', type: 'number', description: '起始行号（从 1 开始），默认从头读取', required: false },
-    { name: 'end_line', type: 'number', description: '结束行号（包含），默认读到文件末尾', required: false },
+    { name: 'file_path', type: 'string', description: 'absolute or relative file path', required: true },
+    { name: 'start_line', type: 'number', description: 'Start line (1-based), defaults to start of file', required: false },
+    { name: 'end_line', type: 'number', description: 'End line (inclusive), defaults to end of file', required: false },
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
       const filePath = params.file_path
 
-      // 路径验证：防止越界访问
+      // Path validation: prevent out-of-bounds access
       const validation = validatePath(filePath)
       if (!validation.valid) {
         return { success: false, output: '', error: validation.error }
       }
 
       if (!existsSync(validation.resolved!)) {
-        return { success: false, output: '', error: `文件不存在: ${filePath}` }
+        return { success: false, output: '', error: `File not found: ${filePath}` }
       }
 
       const content = readFileSync(validation.resolved!, 'utf-8')
@@ -110,7 +110,7 @@ export const readFileTool: Tool = {
       const end = params.end_line ? Math.min(lines.length, Number(params.end_line)) : lines.length
 
       if (start > lines.length) {
-        return { success: false, output: '', error: `起始行 ${start} 超过文件总行数 ${lines.length}` }
+        return { success: false, output: '', error: `Start line ${start} exceeds total lines ${lines.length}` }
       }
 
       const selected = lines.slice(start - 1, end)
@@ -120,23 +120,23 @@ export const readFileTool: Tool = {
 
       return {
         success: true,
-        output: output + `\n--- 共 ${lines.length} 行，显示第 ${start}-${end} 行 ---`,
+        output: output + `\n--- ${lines.length} lines, showing ${start}-${end} ---`,
       }
     } catch (error: any) {
-      return { success: false, output: '', error: `读取失败: ${error.message}` }
+      return { success: false, output: '', error: `Read failed: ${error.message}` }
     }
   },
 }
 
 /**
- * 写入文件内容（创建或覆盖）
+ * Write file content (create or overwrite)
  */
 export const writeFileTool: Tool = {
   name: 'write_file',
-  description: '创建新文件或覆盖已有文件的内容',
+  description: 'Create new file or overwrite existing file content',
   parameters: [
-    { name: 'file_path', type: 'string', description: '文件的绝对路径或相对路径', required: true },
-    { name: 'content', type: 'string', description: '要写入的完整文件内容', required: true },
+    { name: 'file_path', type: 'string', description: 'absolute or relative file path', required: true },
+    { name: 'content', type: 'string', description: 'Full file content to write', required: true },
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
@@ -152,36 +152,36 @@ export const writeFileTool: Tool = {
         return {
           success: false,
           output: '',
-          error: `需要确认: 操作目标 ${filePath} 不在当前工作区内，是否继续？`,
+          error: `Confirm: target ${filePath} is outside the workspace, continue?`,
         }
       }
 
-      // 自动创建父目录
+      // Auto-create parent dir
       const dir = dirname(validation.resolved!)
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true })
       }
 
       writeFileSync(validation.resolved!, content, 'utf-8')
-      return { success: true, output: `已写入文件: ${filePath} (${content.length} 字节)` }
+      return { success: true, output: `Written: ${filePath} (${content.length} bytes)` }
     } catch (error: any) {
-      return { success: false, output: '', error: `写入失败: ${error.message}` }
+      return { success: false, output: '', error: `Write failed: ${error.message}` }
     }
   },
 }
 
 /**
- * 精确编辑文件
+ * Precisely edit file
  */
 export const editFileTool: Tool = {
   name: 'edit_file',
-  description: '精确编辑文件：支持按行范围替换或按字符串查找替换',
+  description: 'Precisely edit file: replace by line range or string match',
   parameters: [
-    { name: 'file_path', type: 'string', description: '文件的绝对路径或相对路径', required: true },
-    { name: 'old_text', type: 'string', description: '要被替换的原始文本（精确匹配）', required: false },
-    { name: 'new_text', type: 'string', description: '替换后的新文本', required: true },
-    { name: 'start_line', type: 'number', description: '替换范围起始行号（与 end_line 配合使用）', required: false },
-    { name: 'end_line', type: 'number', description: '替换范围结束行号（包含）', required: false },
+    { name: 'file_path', type: 'string', description: 'absolute or relative file path', required: true },
+    { name: 'old_text', type: 'string', description: 'Original text to replace (exact match)', required: false },
+    { name: 'new_text', type: 'string', description: 'Replacement text', required: true },
+    { name: 'start_line', type: 'number', description: 'Start line of replacement range (with end_line)', required: false },
+    { name: 'end_line', type: 'number', description: 'End line of replacement range (inclusive)', required: false },
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
@@ -196,19 +196,19 @@ export const editFileTool: Tool = {
         return {
           success: false,
           output: '',
-          error: `需要确认: 编辑目标 ${filePath} 不在当前工作区内，是否继续？`,
+          error: `Confirm: edit target ${filePath} is outside the workspace, continue?`,
         }
       }
 
       if (!existsSync(validation.resolved!)) {
-        return { success: false, output: '', error: `文件不存在: ${filePath}` }
+        return { success: false, output: '', error: `File not found: ${filePath}` }
       }
 
       const content = readFileSync(validation.resolved!, 'utf-8')
       const lines = content.split('\n')
       const language = getLanguageFromPath(filePath)
 
-      // 模式1：按行范围替换
+      // Mode 1: replace by line range
       if (params.start_line && params.end_line) {
         const start = Number(params.start_line)
         const end = Number(params.end_line)
@@ -217,7 +217,7 @@ export const editFileTool: Tool = {
           return {
             success: false,
             output: '',
-            error: `无效的行范围: ${start}-${end}（文件共 ${lines.length} 行）`,
+            error: `Invalid line range: ${start}-${end} (file has ${lines.length} lines)`,
           }
         }
 
@@ -230,7 +230,7 @@ export const editFileTool: Tool = {
 
         return {
           success: true,
-          output: `已替换第 ${start}-${end} 行为新内容（${newLines.length} 行）`,
+          output: `Replaced lines ${start}-${end} with new content (${newLines.length} lines)`,
           diff: {
             filePath,
             language,
@@ -239,13 +239,13 @@ export const editFileTool: Tool = {
         }
       }
 
-      // 模式2：按字符串查找替换
+      // Mode 2: replace by string match
       if (params.old_text) {
         if (!content.includes(params.old_text)) {
           return {
             success: false,
             output: '',
-            error: `未找到要替换的文本: "${params.old_text.slice(0, 80)}${params.old_text.length > 80 ? '...' : ''}"`,
+            error: `Text to replace not found: "${params.old_text.slice(0, 80)}${params.old_text.length > 80 ? '...' : ''}"`,
           }
         }
 
@@ -256,7 +256,7 @@ export const editFileTool: Tool = {
 
         return {
           success: true,
-          output: `已替换匹配的文本`,
+          output: `Replaced matching text`,
           diff: {
             filePath,
             language,
@@ -268,22 +268,22 @@ export const editFileTool: Tool = {
       return {
         success: false,
         output: '',
-        error: '请提供 old_text（字符串替换）或 start_line + end_line（行范围替换）',
+        error: 'Provide old_text (string replace) or start_line + end_line (line range replace)',
       }
     } catch (error: any) {
-      return { success: false, output: '', error: `编辑失败: ${error.message}` }
+      return { success: false, output: '', error: `Edit failed: ${error.message}` }
     }
   },
 }
 
 /**
- * 删除文件
+ * Delete file
  */
 export const deleteFileTool: Tool = {
   name: 'delete_file',
-  description: '删除指定文件',
+  description: 'Delete specified file',
   parameters: [
-    { name: 'file_path', type: 'string', description: '要删除的文件路径', required: true },
+    { name: 'file_path', type: 'string', description: 'Path of file to delete', required: true },
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
@@ -298,35 +298,35 @@ export const deleteFileTool: Tool = {
         return {
           success: false,
           output: '',
-          error: `需要确认: 删除目标 ${filePath} 不在当前工作区内，是否继续？`,
+          error: `Confirm: delete target ${filePath} is outside the workspace, continue?`,
         }
       }
 
       if (!existsSync(validation.resolved!)) {
-        return { success: false, output: '', error: `文件不存在: ${filePath}` }
+        return { success: false, output: '', error: `File not found: ${filePath}` }
       }
 
       const stat = statSync(validation.resolved!)
       if (stat.isDirectory()) {
-        return { success: false, output: '', error: `这是一个目录，不能用 delete_file 删除: ${filePath}` }
+        return { success: false, output: '', error: `This is a directory, cannot delete with delete_file: ${filePath}` }
       }
 
       unlinkSync(validation.resolved!)
-      return { success: true, output: `已删除文件: ${filePath}` }
+      return { success: true, output: `Deleted file: ${filePath}` }
     } catch (error: any) {
-      return { success: false, output: '', error: `删除失败: ${error.message}` }
+      return { success: false, output: '', error: `Delete failed: ${error.message}` }
     }
   },
 }
 
 /**
- * 删除文件夹
+ * Delete folder
  */
 export const deleteDirectoryTool: Tool = {
   name: 'delete_directory',
-  description: '删除指定文件夹及其所有内容（递归删除）',
+  description: 'Delete folder and all its contents (recursive)',
   parameters: [
-    { name: 'dir_path', type: 'string', description: '要删除的文件夹路径', required: true },
+    { name: 'dir_path', type: 'string', description: 'Path of folder to delete', required: true },
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
@@ -341,34 +341,34 @@ export const deleteDirectoryTool: Tool = {
         return {
           success: false,
           output: '',
-          error: `需要确认: 删除目标 ${dirPath} 不在当前工作区内，是否继续？`,
+          error: `Confirm: delete target ${dirPath} is outside the workspace, continue?`,
         }
       }
 
       if (!existsSync(validation.resolved!)) {
-        return { success: false, output: '', error: `文件夹不存在: ${dirPath}` }
+        return { success: false, output: '', error: `Folder not found: ${dirPath}` }
       }
 
       const stat = statSync(validation.resolved!)
       if (!stat.isDirectory()) {
-        return { success: false, output: '', error: `这是一个文件，不能用 delete_directory 删除: ${dirPath}` }
+        return { success: false, output: '', error: `This is a file, cannot delete with delete_directory: ${dirPath}` }
       }
 
       rmSync(validation.resolved!, { recursive: true, force: true })
-      return { success: true, output: `已删除文件夹: ${dirPath}` }
+      return { success: true, output: `Deleted folder: ${dirPath}` }
     } catch (error: any) {
-      return { success: false, output: '', error: `删除失败: ${error.message}` }
+      return { success: false, output: '', error: `Delete failed: ${error.message}` }
     }
   },
 }
 
-// ===================== 搜索和目录工具 =====================
+// ===================== Search and Directory Tools =====================
 
-/** 需要跳过的目录 */
+/** Directories to skip */
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '__pycache__', '.next', '.nuxt'])
 
 /**
- * 将 glob 模式转为正则
+ * Convert glob pattern to regex
  */
 function globToRegex(pattern: string): RegExp {
   const hasWildcard = pattern.includes('*') || pattern.includes('?')
@@ -379,13 +379,13 @@ function globToRegex(pattern: string): RegExp {
       .replace(/\?/g, '.')
     return new RegExp(`^${escaped}$`, 'i')
   }
-  // 无通配符时，使用包含匹配
+  // Without wildcards, use substring match
   const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&')
   return new RegExp(escaped, 'i')
 }
 
 /**
- * 递归搜索文件内容（跨平台 grep 替代）
+ * Recursively search file content (cross-platform grep replacement)
  */
 function searchContent(
   dir: string,
@@ -432,14 +432,14 @@ function searchContent(
           }
         }
       } catch {
-        // 跳过二进制文件或不可读文件
+        // Skip binary or unreadable files
       }
     }
   }
 }
 
 /**
- * 递归搜索文件名（跨平台 find 替代）
+ * Recursively search file names (cross-platform find replacement)
  */
 function searchFiles(
   dir: string,
@@ -474,17 +474,17 @@ function searchFiles(
 }
 
 /**
- * 跨平台搜索工具（替代 grep/find 命令）
- * 内容搜索底层基于正则匹配，文件搜索基于 glob 匹配
+ * Cross-platform search tool (grep/find replacement)
+ * Content search uses regex, file search uses glob matching
  */
 export const searchTool: Tool = {
   name: 'search',
-  description: '跨平台搜索：支持内容搜索（替代 grep）和文件名搜索（替代 find/dir）。优先使用此工具而非 execute_command 进行搜索',
+  description: 'Cross-platform search: content (grep replacement) and file name (find/dir replacement). Prefer over execute_command for searching',
   parameters: [
-    { name: 'query', type: 'string', description: '搜索关键词（内容搜索时支持正则表达式，文件搜索时支持通配符如 *.ts）', required: true },
-    { name: 'path', type: 'string', description: '搜索目录路径，默认当前目录', required: false },
-    { name: 'file_pattern', type: 'string', description: '文件类型过滤，如 "*.ts" 或 "*.ts,*.js"', required: false },
-    { name: 'type', type: 'string', description: '搜索类型: "content" 搜索文件内容（默认），"files" 搜索文件名', required: false },
+    { name: 'query', type: 'string', description: 'Search keyword (regex for content search, wildcards like *.ts for file search)', required: true },
+    { name: 'path', type: 'string', description: 'Directory to search, defaults to current directory', required: false },
+    { name: 'file_pattern', type: 'string', description: 'File type filter, e.g. "*.ts" or "*.ts,*.js"', required: false },
+    { name: 'type', type: 'string', description: 'Search type: "content" for file content (default), "files" for file names', required: false },
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
@@ -494,29 +494,29 @@ export const searchTool: Tool = {
       const searchType = params.type || 'content'
       const cwd = getWorkspaceRoot()
 
-      // 路径验证：防止越界访问
+      // Path validation: prevent out-of-bounds access
       const validation = validatePath(searchPath)
       if (!validation.valid) {
         return { success: false, output: '', error: validation.error }
       }
 
       if (!existsSync(validation.resolved!)) {
-        return { success: false, output: '', error: `路径不存在: ${searchPath}` }
+        return { success: false, output: '', error: `Path not found: ${searchPath}` }
       }
 
       const results: string[] = []
 
       if (searchType === 'files') {
-        // 文件名搜索
+        // File name search
         searchFiles(validation.resolved!, query, results, 200, cwd)
         const output = results.length > 0
-          ? `找到 ${results.length} 个文件：\n${results.join('\n')}`
-          : '未找到匹配的文件'
+          ? `Found ${results.length} files:\n${results.join('\n')}`
+          : 'No matching files found'
         return { success: true, output }
       }
 
-      // 内容搜索
-      // 支持逗号分隔的多文件类型
+      // Content search
+      // Support comma-separated multiple file types
       const patterns = filePattern ? filePattern.split(',').map((s: string) => s.trim()) : undefined
 
       if (patterns && patterns.length > 1) {
@@ -528,24 +528,24 @@ export const searchTool: Tool = {
       }
 
       const output = results.length > 0
-        ? `找到 ${results.length} 处匹配：\n${results.join('\n')}`
-        : '未找到匹配内容'
+        ? `Found ${results.length} matches:\n${results.join('\n')}`
+        : 'No matching content found'
       return { success: true, output }
     } catch (error: any) {
-      return { success: false, output: '', error: `搜索失败: ${error.message}` }
+      return { success: false, output: '', error: `Search failed: ${error.message}` }
     }
   },
 }
 
 /**
- * 创建文件夹工具（替代 mkdir 命令）
+ * Create folder tool (mkdir replacement)
  */
 export const addDirTool: Tool = {
   name: 'add_dir',
-  description: '创建文件夹（支持递归创建父目录）。优先使用此工具而非 execute_command 执行 mkdir',
+  description: 'Create folder (recursive). Prefer over execute_command for mkdir',
   parameters: [
-    { name: 'dir_path', type: 'string', description: '要创建的文件夹路径', required: true },
-    { name: 'recursive', type: 'boolean', description: '是否递归创建父目录，默认 true', required: false },
+    { name: 'dir_path', type: 'string', description: 'Path of folder to create', required: true },
+    { name: 'recursive', type: 'boolean', description: 'Recursively create parent dirs, default true', required: false },
   ],
   execute: async (params): Promise<ToolResult> => {
     try {
@@ -561,22 +561,22 @@ export const addDirTool: Tool = {
         return {
           success: false,
           output: '',
-          error: `需要确认: 创建目标 ${dirPath} 不在当前工作区内，是否继续？`,
+          error: `Confirm: create target ${dirPath} is outside the workspace, continue?`,
         }
       }
 
       if (existsSync(validation.resolved!)) {
         const stat = statSync(validation.resolved!)
         if (stat.isDirectory()) {
-          return { success: true, output: `文件夹已存在: ${dirPath}` }
+          return { success: true, output: `Folder already exists: ${dirPath}` }
         }
-        return { success: false, output: '', error: `路径已存在但不是文件夹: ${dirPath}` }
+        return { success: false, output: '', error: `Path exists but is not a folder: ${dirPath}` }
       }
 
       mkdirSync(validation.resolved!, { recursive })
-      return { success: true, output: `已创建文件夹: ${dirPath}` }
+      return { success: true, output: `Created folder: ${dirPath}` }
     } catch (error: any) {
-      return { success: false, output: '', error: `创建文件夹失败: ${error.message}` }
+      return { success: false, output: '', error: `Create folder failed: ${error.message}` }
     }
   },
 }

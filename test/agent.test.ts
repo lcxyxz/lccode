@@ -233,8 +233,13 @@ describe('Agent', () => {
 
       const callArgs = mockChat.mock.calls[0][0]
       expect(callArgs[0].role).toBe('system')
-      expect(callArgs[0].content).toContain('可用工具')
+      expect(callArgs[0].content).toContain('Available Tools')
       expect(callArgs[0].content).toContain('lccode_json')
+
+      // 语言强制指令应追加在消息列表末尾（在用户提问之后）
+      const lastArg = callArgs[callArgs.length - 1]
+      expect(lastArg.role).toBe('system')
+      expect(lastArg.content).toContain('HARD RULE')
     })
   })
 

@@ -30,12 +30,12 @@ export class PlanAgent {
     const messages: ChatMessage[] = [
       {
         role: 'system',
-        content: `你是任务规划专家。将复杂任务分解为可执行步骤。
-输出 JSON 格式：
+        content: `You are a task planning expert. Break down complex tasks into executable steps.
+Output JSON format:
 {
   "success": true,
   "steps": [{"id": "step-1", "description": "...", "action": "...", "dependencies": []}],
-  "summary": "规划摘要"
+  "summary": "plan summary"
 }`
       },
       { role: 'user', content: taskDescription }
@@ -44,7 +44,7 @@ export class PlanAgent {
     try {
       const result = await this.provider.chat(messages)
       const json = result.response.match(/\{[\s\S]*\}/)?.[0]
-      if (!json) return { success: false, steps: [], summary: '解析失败' }
+      if (!json) return { success: false, steps: [], summary: 'Parse failed' }
       return JSON.parse(json)
     } catch (error) {
       return { success: false, steps: [], summary: String(error) }
@@ -55,9 +55,9 @@ export class PlanAgent {
 export function createPlanAgentTool(config: AgentConfig) {
   return {
     name: 'plan_task',
-    description: '将复杂任务规划成可执行步骤',
+    description: 'Break a complex task into executable steps',
     parameters: [
-      { name: 'task', type: 'string' as const, description: '任务描述', required: true }
+      { name: 'task', type: 'string' as const, description: 'Task description', required: true }
     ],
     execute: async (params: Record<string, any>) => {
       const agent = new PlanAgent(config)

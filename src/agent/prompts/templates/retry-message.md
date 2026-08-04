@@ -1,8 +1,8 @@
-[系统提示] JSON 解析失败
+[System] JSON parse failed
 
-错误信息：{{error}}
+Error: {{error}}
 
-修复提示：
+Fix hint:
 {{hint}}
 
-请严格按照上述提示重新输出 JSON。
+Re-output the JSON strictly following the hint above.
