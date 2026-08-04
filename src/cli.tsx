@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { execSync } from 'node:child_process'
 import { loadConfig } from './config.js'
 import type { LccodeConfig } from './config.js'
 import type { ProviderType } from './types/shared.js'
@@ -6,6 +7,15 @@ import { useState, useEffect } from 'react'
 import { render } from 'ink'
 import { ConfigSetup } from './frontend/components/ConfigSetup.js'
 import App from './app.js'
+
+// Windows 老 conhost 默认 GBK 代码页，切到 UTF-8 保证中文与符号正常显示
+if (process.platform === 'win32') {
+  try {
+    execSync('chcp.com 65001 >nul', { stdio: 'ignore' })
+  } catch {
+    // 终端不支持时静默忽略
+  }
+}
 
 interface RootProps {
   initialConfig: LccodeConfig | null;

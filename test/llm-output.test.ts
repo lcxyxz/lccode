@@ -7,7 +7,7 @@
  *
  * LLM 输出格式要求：
  *   <lccode_json>
- *   { "type": "...", "thought": "...", ... }
+ *   { "type": "...", "round_action": "...", ... }
  *   </lccode_json>
  */
 import { describe, it, expect } from 'bun:test'
@@ -35,7 +35,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "final_answer",
-  "thought": "用户在问天气",
+  "round_action": "用户在问天气",
   "answer": "今天天气晴朗，温度 25°C"
 }
 </lccode_json>`
@@ -49,7 +49,7 @@ describe('parseLLMOutput', () => {
       if (result.success) {
         expect(isFinalAnswerOutput(result.output)).toBe(true)
         expect(result.output.type).toBe('final_answer')
-        expect(result.output.thought).toBe('用户在问天气')
+        expect(result.output.round_action).toBe('用户在问天气')
         expect(result.output.answer).toBe('今天天气晴朗，温度 25°C')
       }
     })
@@ -62,7 +62,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "tool_call",
-  "thought": "用户想查看文件列表",
+  "round_action": "用户想查看文件列表",
   "tool": "execute_command",
   "params": {
     "command": "ls -la"
@@ -89,7 +89,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "need_clarification",
-  "thought": "用户的请求比较模糊",
+  "round_action": "用户的请求比较模糊",
   "question": "你想执行什么操作？",
   "options": ["查看文件", "编辑文件", "执行命令"]
 }
@@ -113,7 +113,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "need_clarification",
-  "thought": "需要确认",
+  "round_action": "需要确认",
   "question": "请具体说明"
 }
 </lccode_json>`
@@ -135,7 +135,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "error",
-  "thought": "文件不存在",
+  "round_action": "文件不存在",
   "error": "文件 /tmp/test.txt 不存在",
   "code": "FILE_NOT_FOUND"
 }
@@ -156,7 +156,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "error",
-  "thought": "发生未知错误",
+  "round_action": "发生未知错误",
   "error": "something went wrong"
 }
 </lccode_json>`
@@ -183,7 +183,7 @@ describe('parseLLMOutput', () => {
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "测试",
+  "round_action": "测试",
   "answer": "OK"
 }
 </lccode_json>
@@ -201,7 +201,7 @@ describe('parseLLMOutput', () => {
 
 {
   "type": "final_answer",
-  "thought": "test",
+  "round_action": "test",
   "answer": "ok"
 }
 
@@ -252,7 +252,7 @@ describe('parseLLMOutput', () => {
     it('应该在缺少 type 字段时返回失败', () => {
       const raw = `<lccode_json>
 {
-  "thought": "test",
+  "round_action": "test",
   "answer": "ok"
 }
 </lccode_json>`
@@ -271,7 +271,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": 123,
-  "thought": "test"
+  "round_action": "test"
 }
 </lccode_json>`
 
@@ -280,9 +280,9 @@ describe('parseLLMOutput', () => {
     })
 
     /**
-     * JSON 合法但缺少 thought 字段
+     * JSON 合法但缺少 round_action 字段
      */
-    it('应该在缺少 thought 字段时返回失败', () => {
+    it('应该在缺少 round_action 字段时返回失败', () => {
       const raw = `<lccode_json>
 {
   "type": "final_answer",
@@ -293,7 +293,7 @@ describe('parseLLMOutput', () => {
       const result = parseLLMOutput(raw)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toContain('thought')
+        expect(result.error).toContain('round_action')
       }
     })
 
@@ -304,7 +304,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "tool_call",
-  "thought": "test",
+  "round_action": "test",
   "params": { "command": "ls" }
 }
 </lccode_json>`
@@ -323,7 +323,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "tool_call",
-  "thought": "test",
+  "round_action": "test",
   "tool": "execute_command"
 }
 </lccode_json>`
@@ -342,7 +342,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "tool_call",
-  "thought": "test",
+  "round_action": "test",
   "tool": "execute_command",
   "params": "not an object"
 }
@@ -359,7 +359,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "final_answer",
-  "thought": "test"
+  "round_action": "test"
 }
 </lccode_json>`
 
@@ -377,7 +377,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "need_clarification",
-  "thought": "test"
+  "round_action": "test"
 }
 </lccode_json>`
 
@@ -395,7 +395,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "error",
-  "thought": "test"
+  "round_action": "test"
 }
 </lccode_json>`
 
@@ -413,7 +413,7 @@ describe('parseLLMOutput', () => {
       const raw = `<lccode_json>
 {
   "type": "unknown_type",
-  "thought": "test"
+  "round_action": "test"
 }
 </lccode_json>`
 
@@ -433,23 +433,23 @@ describe('parseLLMOutput', () => {
      * 每个类型守卫函数应该只对匹配的 type 返回 true
      */
     it('isToolCallOutput 应该只对 tool_call 返回 true', () => {
-      expect(isToolCallOutput({ type: 'tool_call', thought: '', tool: '', params: {} })).toBe(true)
-      expect(isToolCallOutput({ type: 'final_answer', thought: '', answer: '' })).toBe(false)
+      expect(isToolCallOutput({ type: 'tool_call', round_action: '', tool: '', params: {} })).toBe(true)
+      expect(isToolCallOutput({ type: 'final_answer', round_action: '', answer: '' })).toBe(false)
     })
 
     it('isFinalAnswerOutput 应该只对 final_answer 返回 true', () => {
-      expect(isFinalAnswerOutput({ type: 'final_answer', thought: '', answer: '' })).toBe(true)
-      expect(isFinalAnswerOutput({ type: 'tool_call', thought: '', tool: '', params: {} })).toBe(false)
+      expect(isFinalAnswerOutput({ type: 'final_answer', round_action: '', answer: '' })).toBe(true)
+      expect(isFinalAnswerOutput({ type: 'tool_call', round_action: '', tool: '', params: {} })).toBe(false)
     })
 
     it('isNeedClarificationOutput 应该只对 need_clarification 返回 true', () => {
-      expect(isNeedClarificationOutput({ type: 'need_clarification', thought: '', question: '' })).toBe(true)
-      expect(isNeedClarificationOutput({ type: 'error', thought: '', error: '' })).toBe(false)
+      expect(isNeedClarificationOutput({ type: 'need_clarification', round_action: '', question: '' })).toBe(true)
+      expect(isNeedClarificationOutput({ type: 'error', round_action: '', error: '' })).toBe(false)
     })
 
     it('isErrorOutput 应该只对 error 返回 true', () => {
-      expect(isErrorOutput({ type: 'error', thought: '', error: '' })).toBe(true)
-      expect(isErrorOutput({ type: 'final_answer', thought: '', answer: '' })).toBe(false)
+      expect(isErrorOutput({ type: 'error', round_action: '', error: '' })).toBe(true)
+      expect(isErrorOutput({ type: 'final_answer', round_action: '', answer: '' })).toBe(false)
     })
   })
 })

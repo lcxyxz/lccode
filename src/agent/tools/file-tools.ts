@@ -5,6 +5,13 @@ import type { Tool, ToolResult, DiffLine } from './tool-registry.js'
 import { validatePath, getWorkspaceRoot } from '../../utils/sandbox.js'
 
 /**
+ * 检测内容是否包含无法用 UTF-8 解码的字符（可能是 GBK 等其他编码）
+ */
+function hasUndecodableChars(content: string): boolean {
+  return content.includes('\uFFFD')
+}
+
+/**
  * Compute diff between two texts
  */
 function computeDiff(oldText: string, newText: string): DiffLine[] {
@@ -104,6 +111,9 @@ export const readFileTool: Tool = {
       }
 
       const content = readFileSync(validation.resolved!, 'utf-8')
+      if (hasUndecodableChars(content)) {
+        return { success: false, output: '', error: `File is not valid UTF-8 (possibly GBK or another encoding, cannot be read safely): ${filePath}` }
+      }
       const lines = content.split('\n')
 
       const start = params.start_line ? Math.max(1, Number(params.start_line)) : 1
@@ -205,6 +215,9 @@ export const editFileTool: Tool = {
       }
 
       const content = readFileSync(validation.resolved!, 'utf-8')
+      if (hasUndecodableChars(content)) {
+        return { success: false, output: '', error: `File is not valid UTF-8 (possibly GBK or another encoding, edit would corrupt it): ${filePath}` }
+      }
       const lines = content.split('\n')
       const language = getLanguageFromPath(filePath)
 
@@ -422,6 +435,7 @@ function searchContent(
 
       try {
         const content = readFileSync(fullPath, 'utf-8')
+        if (hasUndecodableChars(content)) continue
         const lines = content.split('\n')
         for (let i = 0; i < lines.length; i++) {
           if (queryRegex.test(lines[i])) {

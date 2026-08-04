@@ -5,7 +5,7 @@ Correct format example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "your thinking",
+  "round_action": "your thinking",
   "answer": "your answer"
 }
 </lccode_json>
@@ -26,7 +26,7 @@ Correct example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "thinking",
+  "round_action": "thinking",
   "answer": "first line\\nsecond line"
 }
 </lccode_json>
@@ -47,19 +47,19 @@ Example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "thinking",
+  "round_action": "thinking",
   "answer": "answer content"
 }
 </lccode_json>
 
-<!-- hint:missingThought -->
-The thought field is required and must contain your reasoning.
+<!-- hint:missingRoundAction -->
+The round_action field is required and must describe the action you will take this round.
 
 Example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "User wants to know how to run the code, I need to provide the run command",
+  "round_action": "User wants to know how to run the code, I need to provide the run command",
   "answer": "Run: python test.py"
 }
 </lccode_json>
@@ -71,7 +71,7 @@ Example:
 <lccode_json>
 {
   "type": "tool_call",
-  "thought": "need to run ls to list files",
+  "round_action": "need to run ls to list files",
   "tool": "execute_command",
   "params": { "command": "ls -la" }
 }
@@ -84,7 +84,7 @@ Example:
 <lccode_json>
 {
   "type": "tool_call",
-  "thought": "need to write a file",
+  "round_action": "need to write a file",
   "tool": "write_file",
   "params": { 
     "file_path": "test.txt",
@@ -100,7 +100,7 @@ Example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "task done",
+  "round_action": "task done",
   "answer": "File created successfully"
 }
 </lccode_json>
@@ -112,7 +112,7 @@ Example:
 <lccode_json>
 {
   "type": "need_clarification",
-  "thought": "user intent is unclear",
+  "round_action": "user intent is unclear",
   "question": "Which operation do you need?",
   "options": ["view files", "run command"]
 }
@@ -125,7 +125,7 @@ Example:
 <lccode_json>
 {
   "type": "error",
-  "thought": "an error occurred",
+  "round_action": "an error occurred",
   "error": "file not found"
 }
 </lccode_json>
@@ -141,7 +141,7 @@ Example:
 <lccode_json>
 {
   "type": "final_answer",
-  "thought": "thinking",
+  "round_action": "thinking",
   "answer": "answer content"
 }
 </lccode_json>

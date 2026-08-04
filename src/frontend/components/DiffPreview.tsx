@@ -23,7 +23,7 @@ export function DiffPreview({ filePath, language, lines }: DiffPreviewProps) {
           <Text color="gray"> ({lines.length} lines, showing first {MAX_LINES})</Text>
         )}
       </Box>
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
+      <Box flexDirection="column" marginLeft={2}>
         {displayLines.map((line, i) => {
           let highlighted: string
           try {

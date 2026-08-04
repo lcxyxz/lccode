@@ -124,8 +124,8 @@ export class Agent {
     const zhRule = '用户使用用中文提问，你必须以中文输出。'
     const enRule = 'The user is asking in English, you MUST reply in English.'
     return lang === 'zh'
-      ? `[HARD RULE] ${zhRule} final_answer.answer、need_clarification.question/options、error 等所有面向用户的内容都必须用中文，不允许用英文回答。thought 是内部思考，可继续用英文。`
-      : `[HARD RULE] ${enRule} All user-facing content (final_answer.answer, need_clarification.question/options, error) MUST be in English. thought is internal and may stay in English.`
+      ? `[HARD RULE] ${zhRule} final_answer.answer、need_clarification.question/options、error 等所有面向用户的内容都必须用中文，不允许用英文回答。round_action 是内部行动说明，可继续用英文。`
+      : `[HARD RULE] ${enRule} All user-facing content (final_answer.answer, need_clarification.question/options, error) MUST be in English. round_action is internal and may stay in English.`
   }
 
   private buildMessages(): ChatMessage[] {
@@ -186,10 +186,6 @@ export class Agent {
       }
       this.logger.debug('LLM response:', llmResult.response)
 
-      if (llmResult.thinking) {
-        yield { type: 'thinking', content: llmResult.thinking, metadata: { round } }
-      }
-
       if (llmResult.usage) {
         yield {
           type: 'token_usage',
@@ -224,10 +220,6 @@ export class Agent {
       parseRetries = 0
       const output = result.output
 
-      if (!llmResult.thinking && output.thought) {
-        yield { type: 'thinking', content: output.thought, metadata: { round } }
-      }
-
       // 处理最终答案
       if (isFinalAnswerOutput(output)) {
         this.pushAssistant(llmResult.response)
@@ -259,6 +251,10 @@ export class Agent {
 
       // 处理工具调用
       if (isToolCallOutput(output)) {
+        if (output.round_action) {
+          yield { type: 'thinking', content: output.round_action, metadata: { round } }
+        }
+
         this.logger.debug(`Executing tool: ${output.tool}`, JSON.stringify(output.params))
 
         const tool = this.registry.get(output.tool)

@@ -106,6 +106,19 @@ const DEFAULT_CONFIG: SandboxConfig = {
     'pip3\\s+install',        // 拦截 pip3 install
     'cargo\\s+install',       // 拦截 cargo install
     'gem\\s+install',         // 拦截 gem install
+    'winget\\s+(install|upgrade)', // 拦截 winget 安装
+    'scoop\\s+install',       // 拦截 scoop 安装
+    'choco\\s+install',       // 拦截 chocolatey 安装
+    'choco\\s+upgrade',       // 拦截 chocolatey 升级
+    'Invoke-Expression\\b',   // 拦截 PowerShell 动态执行
+    'iex\\s*\\(' ,            // 拦截 iex 调用
+    'irm\\s+.*\\|\\s*iex',    // 拦截下载并执行远程脚本
+    'Set-ExecutionPolicy\\b', // 拦截修改执行策略
+    'reg\\s+(add|delete|import)', // 拦截注册表修改
+    'format\\s+[A-Za-z]:',    // 拦截磁盘格式化
+    'rd\\s+\\/s',             // 拦截 rmdir /s 递归删除
+    'rmdir\\s+\\/s',          // 拦截 rmdir /s 递归删除
+    'del\\s+\\/[a-z]*f',      // 拦截 del /f 强制删除
   ],
 }
 
@@ -205,6 +218,19 @@ export function setPreset(preset: 'strict' | 'relaxed' | 'permissive'): void {
         'dd\\s+if=',
         ':\\(\\)\\{.*\\|.*&\\s*\\}:',
         '\\|\\s*(bash|sh|cmd|powershell)\\b',
+        'winget\\s+(install|upgrade)',
+        'scoop\\s+install',
+        'choco\\s+install',
+        'choco\\s+upgrade',
+        'Invoke-Expression\\b',
+        'iex\\s*\\(',
+        'irm\\s+.*\\|\\s*iex',
+        'Set-ExecutionPolicy\\b',
+        'reg\\s+(add|delete|import)',
+        'format\\s+[A-Za-z]:',
+        'rd\\s+\\/s',
+        'rmdir\\s+\\/s',
+        'del\\s+\\/[a-z]*f',
       ]
       break
     case 'relaxed':
@@ -254,8 +280,12 @@ function extractPaths(command: string): string[] {
     // 跳过命令本身和选项
     if (part.startsWith('-') || !part) continue
 
-    // 检测绝对路径
+    // 检测绝对路径（POSIX / 开头）
     if (part.startsWith('/')) {
+      paths.push(part)
+    }
+    // 检测 Windows 盘符绝对路径（C:\ 或 C:/ 开头）
+    else if (/^[A-Za-z]:[\\/]/.test(part)) {
       paths.push(part)
     }
     // 检测相对路径中的 .. 穿越
@@ -294,12 +324,14 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
     }
   }
 
-  // 1. 检查绝对路径访问（包括 ls /）
+  // 1. 检查绝对路径访问（包括 ls / 和 Windows 盘符路径）
   if (!hasPermission('absolute_paths')) {
     const absolutePathPatterns = [
       /\s+\/\s*$/,           // ls / 或 cd /
       /\s+\/[a-zA-Z]/,      // ls /home, cat /etc/passwd
       /^\//,                 // 以 / 开头的命令
+      /^\s*[A-Za-z]:[\\/]/,  // 以 C:\ 开头的命令
+      /\s+[A-Za-z]:[\\/]/,   // 命令中包含 C:\ 路径
     ]
 
     for (const pattern of absolutePathPatterns) {
@@ -315,7 +347,7 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
     }
   }
 
-  // 2. 检查环境变量泄露
+  // 2. 检查环境变量泄露（支持 $VAR 与 Windows %VAR% 语法）
   if (!hasPermission('env_vars')) {
     const envVarPatterns = [
       /\$\{?HOME\}?/,
@@ -326,6 +358,7 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
       /\$\{?PWD\}?/,
       /\$\{?LANG\}?/,
       /\$\{?TERM\}?/,
+      /%[A-Za-z_][A-Za-z0-9_]*%/, // Windows 环境变量（%HOME%, %PATH% 等）
     ]
 
     for (const pattern of envVarPatterns) {
@@ -347,6 +380,8 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
       /\btelnet\b/,
       /\bnetcat\b/,
       /\bnc\b/,
+      /\birm\b/,   // PowerShell Invoke-RestMethod
+      /\biwr\b/,   // PowerShell Invoke-WebRequest
     ]
 
     for (const pattern of networkPatterns) {
@@ -373,12 +408,13 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
     }
   }
 
-  // 5. 检查用户目录访问
+  // 5. 检查用户目录访问（POSIX ~/ 与 Windows Users 目录）
   if (!hasPermission('user_dirs')) {
     const homeDirPatterns = [
       /\s+~\//,
       /\s+\$HOME\//,
       /\s+\/home\//,
+      /\s+[A-Za-z]:\\(Users|Documents and Settings)\\/, // C:\Users\...
     ]
 
     for (const pattern of homeDirPatterns) {
@@ -393,7 +429,7 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
     return { safe: false, error: '禁止使用 .. 穿越目录' }
   }
 
-  // 7. 检查系统目录访问
+  // 7. 检查系统目录访问（POSIX 与 Windows 系统目录）
   if (!hasPermission('system_dirs')) {
     const systemDirPatterns = [
       /\s+\/etc\//,
@@ -404,6 +440,7 @@ export function validateCommand(command: string): { safe: boolean; error?: strin
       /\s+\/dev\//,
       /\s+\/proc\//,
       /\s+\/sys\//,
+      /\s+[A-Za-z]:\\(Windows|ProgramData|System32|Program Files|Program Files \(x86\))\\/, // C:\Windows\... 等
     ]
 
     for (const pattern of systemDirPatterns) {

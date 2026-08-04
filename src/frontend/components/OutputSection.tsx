@@ -6,14 +6,13 @@ const MAX_CONTENT_LENGTH = 10000
 
 interface OutputSectionProps {
   section: OutputSectionType
-  showDetails: boolean
 }
 
-export function OutputSection({ section, showDetails }: OutputSectionProps) {
+export function OutputSection({ section }: OutputSectionProps) {
   if (!section) return null
 
   if (section.type === 'round') {
-    return <RoundCard section={section} showDetails={showDetails} />
+    return <RoundCard section={section} />
   }
 
   if (!section.content) return null

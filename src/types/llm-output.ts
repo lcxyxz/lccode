@@ -11,7 +11,7 @@ import { PARSE_HINTS } from '../agent/prompts/loader.js'
 // 基础接口
 interface BaseOutput {
   type: string
-  thought: string 
+  round_action: string 
 }
 
 // 工具调用
@@ -135,12 +135,12 @@ export function parseLLMOutput(raw: string): ParseResult {
     }
   }
 
-  // 验证 thought 字段
-  if (!parsed.thought || typeof parsed.thought !== 'string') {
+  // 验证 round_action 字段
+  if (!parsed.round_action || typeof parsed.round_action !== 'string') {
     return {
       success: false,
-      error: '缺少 thought 字段或 thought 字段为空',
-      hint: PARSE_HINTS.missingThought(),
+      error: '缺少 round_action 字段或 round_action 字段为空',
+      hint: PARSE_HINTS.missingRoundAction(),
     }
   }
 
@@ -165,7 +165,7 @@ export function parseLLMOutput(raw: string): ParseResult {
         success: true,
         output: {
           type: 'tool_call',
-          thought: parsed.thought,
+          round_action: parsed.round_action,
           tool: parsed.tool,
           params: parsed.params
         }
@@ -183,7 +183,7 @@ export function parseLLMOutput(raw: string): ParseResult {
         success: true,
         output: {
           type: 'final_answer',
-          thought: parsed.thought,
+          round_action: parsed.round_action,
           answer: parsed.answer
         }
       }
@@ -200,7 +200,7 @@ export function parseLLMOutput(raw: string): ParseResult {
         success: true,
         output: {
           type: 'need_clarification',
-          thought: parsed.thought,
+          round_action: parsed.round_action,
           question: parsed.question,
           options: parsed.options
         }
@@ -218,7 +218,7 @@ export function parseLLMOutput(raw: string): ParseResult {
         success: true,
         output: {
           type: 'error',
-          thought: parsed.thought,
+          round_action: parsed.round_action,
           error: parsed.error,
           code: parsed.code
         }

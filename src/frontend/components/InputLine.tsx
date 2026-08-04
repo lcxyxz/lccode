@@ -12,7 +12,7 @@ interface InputLineProps {
 
 export function InputLine({ value, onChange, onSubmit, onCancel, llmStatus }: InputLineProps) {
   const promptColor = llmStatus === 'loading' ? 'yellow' : llmStatus === 'error' ? 'red' : 'green'
-  const promptIcon = llmStatus === 'loading' ? '…' : '❯'
+  const promptIcon = llmStatus === 'loading' ? '…' : '»'
 
   return (
     <Box>

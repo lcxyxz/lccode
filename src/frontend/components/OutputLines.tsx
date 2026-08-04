@@ -3,17 +3,15 @@ import { OutputSection } from './OutputSection.js'
 
 interface OutputLinesProps {
   sections: OutputSectionType[]
-  showDetails: boolean
 }
 
-export function OutputLines({ sections, showDetails }: OutputLinesProps) {
+export function OutputLines({ sections }: OutputLinesProps) {
   return (
     <>
       {sections.map((section) => (
         <OutputSection
           key={section.id}
           section={section}
-          showDetails={showDetails}
         />
       ))}
     </>

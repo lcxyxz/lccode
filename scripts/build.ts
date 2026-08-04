@@ -44,6 +44,7 @@ function generateVersion(): void {
 const TARGETS: Record<string, string> = {
   'bun-windows-x64': 'win32-x64',
   'bun-linux-x64': 'linux-x64',
+  'bun-linux-arm64': 'linux-arm64',
   'bun-darwin-arm64': 'darwin-arm64',
   'bun-darwin-x64': 'darwin-x64',
 }

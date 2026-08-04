@@ -5,10 +5,9 @@ interface StatusLineProps {
   llmStatus: LLMStatus
   modelName?: string
   tokenUsage?: TokenUsage
-  showDetails?: boolean
 }
 
-export function StatusLine({ llmStatus, modelName, tokenUsage, showDetails }: StatusLineProps) {
+export function StatusLine({ llmStatus, modelName, tokenUsage }: StatusLineProps) {
   const statusColor = {
     idle: 'gray',
     loading: 'yellow',
@@ -18,9 +17,9 @@ export function StatusLine({ llmStatus, modelName, tokenUsage, showDetails }: St
 
   const statusIcon = {
     idle: '○',
-    loading: '◌',
+    loading: '…',
     done: '●',
-    error: '✗',
+    error: '×',
   }[llmStatus]
 
   const formatTokens = (n: number) => {
@@ -32,7 +31,7 @@ export function StatusLine({ llmStatus, modelName, tokenUsage, showDetails }: St
     <Box justifyContent="space-between" paddingTop={1} borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray">
       <Box>
         <Text color="cyan" bold>{modelName || 'AI'}</Text>
-        <Text color="gray"> │ Tab {showDetails ? '收起详情' : '展开详情'} │ Ctrl+C Exit</Text>
+        <Text color="gray"> │ Ctrl+C Exit</Text>
       </Box>
       <Box>
         {tokenUsage && tokenUsage.totalTokens > 0 && (

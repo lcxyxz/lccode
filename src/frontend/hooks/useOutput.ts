@@ -13,8 +13,6 @@ export function useOutput() {
   const idCounterRef = useRef(2)
   /** 最近一个轮次卡片（round 编号 → 卡片 id），用于事件按轮聚合 */
   const lastRoundRef = useRef<{ round: number; id: number } | null>(null)
-  /** 详情模式是否开启（Tab 切换，控制所有卡片思考/执行结果的展开） */
-  const [showDetails, setShowDetails] = useState(false)
 
   const addMessage = useCallback((content: string, color?: OutputSection['color']) => {
     const id = idCounterRef.current++
@@ -81,10 +79,6 @@ export function useOutput() {
     setSections(prev => prev.filter(s => s.id < 2))
   }, [])
 
-  const toggleDetails = useCallback(() => {
-    setShowDetails(v => !v)
-  }, [])
-
   return {
     sections,
     addMessage,
@@ -94,7 +88,5 @@ export function useOutput() {
     addRoundDiff,
     startQuery,
     clearSections,
-    showDetails,
-    toggleDetails,
   }
 }

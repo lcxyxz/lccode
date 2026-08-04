@@ -134,36 +134,36 @@ vi.mock('../src/agent/mcp/manager.js', () => {
 /**
  * 创建一个 final_answer 类型的 LLM 响应
  */
-function makeFinalAnswer(thought: string, answer: string) {
+function makeFinalAnswer(roundAction: string, answer: string) {
   return {
-    response: `<lccode_json>\n${JSON.stringify({ type: 'final_answer', thought, answer }, null, 2)}\n</lccode_json>`,
+    response: `<lccode_json>\n${JSON.stringify({ type: 'final_answer', round_action: roundAction, answer }, null, 2)}\n</lccode_json>`,
   }
 }
 
 /**
  * 创建一个 tool_call 类型的 LLM 响应
  */
-function makeToolCall(thought: string, tool: string, params: Record<string, any>) {
+function makeToolCall(roundAction: string, tool: string, params: Record<string, any>) {
   return {
-    response: `<lccode_json>\n${JSON.stringify({ type: 'tool_call', thought, tool, params }, null, 2)}\n</lccode_json>`,
+    response: `<lccode_json>\n${JSON.stringify({ type: 'tool_call', round_action: roundAction, tool, params }, null, 2)}\n</lccode_json>`,
   }
 }
 
 /**
  * 创建一个 need_clarification 类型的 LLM 响应
  */
-function makeClarification(thought: string, question: string, options?: string[]) {
+function makeClarification(roundAction: string, question: string, options?: string[]) {
   return {
-    response: `<lccode_json>\n${JSON.stringify({ type: 'need_clarification', thought, question, options }, null, 2)}\n</lccode_json>`,
+    response: `<lccode_json>\n${JSON.stringify({ type: 'need_clarification', round_action: roundAction, question, options }, null, 2)}\n</lccode_json>`,
   }
 }
 
 /**
  * 创建一个 error 类型的 LLM 响应
  */
-function makeError(thought: string, error: string) {
+function makeError(roundAction: string, error: string) {
   return {
-    response: `<lccode_json>\n${JSON.stringify({ type: 'error', thought, error }, null, 2)}\n</lccode_json>`,
+    response: `<lccode_json>\n${JSON.stringify({ type: 'error', round_action: roundAction, error }, null, 2)}\n</lccode_json>`,
   }
 }
 
@@ -194,15 +194,15 @@ describe('Agent', () => {
   describe('final_answer 处理', () => {
     /**
      * 应该正确处理最终答案响应
-     * 产生 thinking 和 response 事件
+     * 产生 response 事件，不产生 thinking 事件
      */
     it('应该处理最终答案的响应', async () => {
       mockChat.mockResolvedValue(makeFinalAnswer('用户只是打招呼', '你好！有什么可以帮你的？'))
 
       const events = await collectEvents(agent, '你好')
 
-      // 应该有思考事件
-      expect(events.some(e => e.type === 'thinking')).toBe(true)
+      // 不应该有思考事件（最终答案只显示 answer）
+      expect(events.some(e => e.type === 'thinking')).toBe(false)
       // 应该有响应事件，包含答案
       expect(events.some(e => e.type === 'response' && e.content.includes('你好'))).toBe(true)
     })
@@ -243,23 +243,37 @@ describe('Agent', () => {
     })
   })
 
-  // ---------- 思考内容输出 ----------
+  // ---------- round_action 输出 ----------
 
-  describe('思考内容输出', () => {
+  describe('round_action 输出', () => {
     /**
-     * LLM 原生思考应该作为 thinking 事件输出
+     * 工具调用轮应该把代码自己指定的 round_action 作为 thinking 事件输出
      */
-    it('应该支持思考内容输出', async () => {
+    it('工具调用时应该输出 round_action 作为思考事件', async () => {
+      mockChat
+        .mockResolvedValueOnce(makeToolCall('用户想查看文件', 'execute_command', { command: 'ls' }))
+        .mockResolvedValueOnce(makeFinalAnswer('已获得文件列表', '文件列表：file1.txt, file2.txt'))
+
+      const events = await collectEvents(agent, '查看文件')
+
+      const thinkingEvents = events.filter(e => e.type === 'thinking')
+      expect(thinkingEvents.length).toBe(1)
+      expect(thinkingEvents[0].content).toBe('用户想查看文件')
+    })
+
+    /**
+     * 大模型的原生思考内容（reasoning_content）不应该作为 thinking 事件输出
+     */
+    it('不应该输出大模型原生思考内容', async () => {
       mockChat.mockResolvedValue({
-        ...makeFinalAnswer('这是思考过程', '最终答案'),
+        ...makeFinalAnswer('这是代码自己的 round_action', '最终答案'),
         thinking: 'LLM 原生思考...',
       })
 
       const events = await collectEvents(agent, 'test')
 
-      // 应该有 LLM 原生思考事件
       const thinkingEvents = events.filter(e => e.type === 'thinking')
-      expect(thinkingEvents.length).toBeGreaterThanOrEqual(1)
+      expect(thinkingEvents.length).toBe(0)
     })
   })
 
@@ -390,19 +404,19 @@ describe('Agent', () => {
 
   describe('解析失败重试', () => {
     /**
-     * 缺少 thought 字段时应该重试
+     * 缺少 round_action 字段时应该重试
      * 第一次返回错误格式，第二次返回正确格式
      */
-    it('应该拒绝没有 thought 字段的响应并重试', async () => {
-      // 第一次返回没有 thought 字段的响应
+    it('应该拒绝没有 round_action 字段的响应并重试', async () => {
+      // 第一次返回没有 round_action 字段的响应
       mockChat
         .mockResolvedValueOnce({
-          response: `<lccode_json>\n${JSON.stringify({ type: 'final_answer', answer: '缺少thought' })}\n</lccode_json>`,
+          response: `<lccode_json>\n${JSON.stringify({ type: 'final_answer', answer: '缺少round_action' })}\n</lccode_json>`,
         })
         // 第二次返回正确的响应
         .mockResolvedValueOnce(makeFinalAnswer('修正后', '正确答案'))
 
-      const events = await collectEvents(agent, '测试thought')
+      const events = await collectEvents(agent, '测试round_action')
 
       // 应该有重试提示
       const responseEvents = events.filter(e => e.type === 'response')

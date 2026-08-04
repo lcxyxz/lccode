@@ -29,7 +29,7 @@ export function useTerminal(onExit?: () => void) {
   // ==================== 核心 Hooks ====================
 
   /** 输出管理：管理终端的输出内容（消息、轮次卡片等） */
-  const { sections, addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, clearSections, startQuery, showDetails, toggleDetails } = useOutput()
+  const { sections, addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, clearSections, startQuery } = useOutput()
 
   /** 命令历史：支持上下箭头浏览历史命令 */
   const { addHistory, navigateUp } = useCommandHistory()
@@ -60,8 +60,8 @@ export function useTerminal(onExit?: () => void) {
   // ==================== Ref 更新（避免闭包问题）====================
 
   /** 输出操作的 Ref，确保 useInput 回调能访问最新的输出函数 */
-  const actionsRef = useRef({ addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, addHistory, clearSections, startQuery, toggleDetails })
-  actionsRef.current = { addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, addHistory, clearSections, startQuery, toggleDetails }
+  const actionsRef = useRef({ addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, addHistory, clearSections, startQuery })
+  actionsRef.current = { addMessage, addRoundThinking, addRoundCommand, addRoundResponse, addRoundDiff, addHistory, clearSections, startQuery }
 
   /** LLM 通信 */
   const { callAgent, llmStatus, tokenUsage } = useLLM(agentRef, {
@@ -211,12 +211,6 @@ export function useTerminal(onExit?: () => void) {
       if (histCmd !== null) setInputRef.current(histCmd)
       return
     }
-
-    // Tab：切换详情模式（思考内容 / 工具执行结果展开）
-    if (key.tab) {
-      actionsRef.current.toggleDetails()
-      return
-    }
   })
 
   // 赋值 setInput 给 Ref，供 useInput 回调使用
@@ -233,9 +227,6 @@ export function useTerminal(onExit?: () => void) {
   return {
     // 输出相关
     sections,        // 输出内容列表（消息、轮次卡片等）
-
-    // 详情模式相关
-    showDetails,     // 是否展开卡片详情（思考 / 执行结果）
 
     // 输入相关
     input,           // 当前输入框内容
