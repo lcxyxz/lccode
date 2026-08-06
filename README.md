@@ -1,12 +1,12 @@
 # lccode
 
-一个基于 Ink 构建的极简终端 AI 编程助手，支持 DeepSeek 和 Mimo 两家 AI 服务提供商。
+一个基于 Ink 构建的极简终端 AI 编程助手，支持多家 AI 服务提供商和OpenAI兼容网关。
 
 **版本**: 0.1.2 | **协议**: MIT | **运行时**: Bun 编译的独立单文件程序（用户无需安装 Bun / Node.js）
 
 ## 功能特性
 
-- **多厂商 AI 对话**：支持 DeepSeek 和 Mimo 两家服务商，灵活切换模型
+- **多厂商 AI 对话**：支持多家服务商，灵活切换模型
 - **MCP 协议**：支持 Model Context Protocol，可连接外部工具服务器
 - **命令执行**：AI 可以生成并执行终端命令，实时反馈结果
 - **交互式界面**：基于 Ink 的终端 UI，支持文件和命令建议
@@ -224,6 +224,7 @@ EOF
 |----------|------|----------|
 | `deepseek` | DeepSeek API（默认） | `deepseek-v4-pro` |
 | `mimo` | Mimo API | `mimo-v2.5-pro` |
+| `openai` | OpenAI 官方 API（Chat Completions） | `gpt-4o` |
 
 #### 配置示例
 
@@ -244,6 +245,17 @@ EOF
   "model": "mimo-v2.5-pro"
 }
 ```
+
+**OpenAI**
+```json
+{
+  "provider": "openai",
+  "apiKey": "sk-your-openai-key",
+  "model": "gpt-4o"
+}
+```
+
+> 所有 Provider 均基于 OpenAI 兼容协议。`baseUrl` 可配置为任何 OpenAI 兼容网关，如 `https://api.openai.com/v1`、DeepSeek、Mimo、自建代理等。
 
 #### 配置项说明
 
@@ -333,7 +345,8 @@ lccode/
 │   │   ├── providers/            # AI 服务提供商实现
 │   │   │   ├── base.ts           # OpenAI 兼容基类
 │   │   │   ├── deepseek.ts       # DeepSeek 实现
-│   │   │   └── mimo.ts           # Mimo 实现
+│   │   │   ├── mimo.ts           # Mimo 实现
+│   │   │   └── openai.ts         # OpenAI 官方实现
 │   │   ├── command-executor.ts   # 命令执行器
 │   │   ├── index.ts              # 提供商工厂
 │   │   └── types.ts              # 提供商接口
@@ -357,7 +370,7 @@ lccode/
 
 ## 任务清单
 
-- [x] **多厂商模型支持**：接入 DeepSeek 和 Mimo 两家人工智能服务商，灵活切换模型
+- [x] **多厂商模型支持**：接入多家人工智能服务商和 OpenAI 兼容网关。
 - [x] **MCP 协议集成**：支持 Model Context Protocol，扩展 AI 与外部工具的互联能力
 - [x] **记忆系统**：支持跨会话的上下文记忆和摘要
 - [x] **计划任务**：支持 plan_task 子 Agent，自动规划和执行复杂任务

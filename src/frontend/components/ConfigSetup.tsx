@@ -18,6 +18,7 @@ type Step = 'welcome' | 'apikey' | 'provider' | 'model' | 'baseurl' | 'done'
 const PROVIDERS: { label: string; value: ProviderType; defaultModel: string }[] = [
   { label: 'deepseek', value: 'deepseek', defaultModel: 'deepseek-v4-flash' },
   { label: 'mimo', value: 'mimo', defaultModel: 'mimo-v2-flash' },
+  { label: 'openai', value: 'openai', defaultModel: 'gpt-4o' },
 ]
 
 export function ConfigSetup({ onComplete }: ConfigSetupProps) {

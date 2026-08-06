@@ -38,13 +38,34 @@ function getPlatformInfo(): string {
 }
 
 /**
+ * 生成当前时间信息，让模型感知当前时刻
+ * frozenTime 由调用方冻结传入，同一任务内保持固定，避免每轮重建打断前缀缓存
+ */
+export function createFrozenTimeInfo(): string {
+  const now = new Date()
+  const fmt = (n: number) => String(n).padStart(2, '0')
+  const date = `${now.getFullYear()}-${fmt(now.getMonth() + 1)}-${fmt(now.getDate())}`
+  const time = `${fmt(now.getHours())}:${fmt(now.getMinutes())}:${fmt(now.getSeconds())}`
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()]
+  return `The current system time is ${weekday}, ${date} ${time} (timezone: ${tz}).`
+}
+
+function getCurrentTimeInfo(frozenTime?: string): string {
+  return frozenTime ?? createFrozenTimeInfo()
+}
+
+/**
  * 构建系统提示词
+ * @param frozenTime 可选的预冻结时间字符串；同一任务内传入相同值可保证提示词前缀稳定
  */
 export function buildSystemPrompt(
   registry: ToolRegistry,
+  frozenTime?: string,
 ): string {
   return render(getSystemPrompt(), {
     toolDescriptions: registry.formatToolDescriptions(),
     platformInfo: getPlatformInfo(),
+    currentTime: getCurrentTimeInfo(frozenTime),
   })
 }

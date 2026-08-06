@@ -309,6 +309,91 @@ describe('DeepSeekProvider', () => {
   })
 })
 
+// ===================== OpenAIProvider 测试 =====================
+
+describe('OpenAIProvider', () => {
+  let provider: any
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { OpenAIProvider } = await import('../src/services/providers/openai.js')
+    provider = new OpenAIProvider({
+      apiKey: 'test-key',
+      model: 'test-model',
+    })
+  })
+
+  describe('基本配置', () => {
+    /**
+     * Provider name 应该是 'openai'
+     */
+    it('应该有正确的 name', () => {
+      expect(provider.name).toBe('openai')
+    })
+
+    /**
+     * 应该使用指定的模型
+     */
+    it('应该使用指定的模型', async () => {
+      mockCreate.mockResolvedValue(createMockStream([
+        { choices: [{ delta: { content: 'OK' } }] },
+      ]))
+
+      await provider.chat([{ role: 'user', content: 'Hi' }])
+
+      expect(mockCreate.mock.calls[0][0].model).toBe('test-model')
+    })
+
+    /**
+     * 未指定模型时应使用默认模型 gpt-4o
+     */
+    it('未指定模型时使用默认模型', () => {
+      const defaultProvider = new (provider.constructor)({ apiKey: 'test-key' })
+      mockCreate.mockResolvedValue(createMockStream([
+        { choices: [{ delta: { content: 'OK' } }] },
+      ]))
+      return defaultProvider.chat([{ role: 'user', content: 'Hi' }]).then(() => {
+        expect(mockCreate.mock.calls[0][0].model).toBe('gpt-4o')
+      })
+    })
+  })
+
+  describe('流式响应处理', () => {
+    /**
+     * 应该正确拼接流式响应内容
+     */
+    it('应该正确处理流式响应', async () => {
+      mockCreate.mockResolvedValue(createMockStream([
+        { choices: [{ delta: { content: 'Hello' } }] },
+        { choices: [{ delta: { content: ' World' } }] },
+      ]))
+
+      const result = await provider.chat([{ role: 'user', content: 'Hi' }])
+
+      expect(result.response).toBe('Hello World')
+      expect(result.thinking).toBeUndefined()
+    })
+
+    /**
+     * 应该正确解析 usage 信息
+     */
+    it('应该正确解析 usage 信息', async () => {
+      mockCreate.mockResolvedValue(createMockStream([
+        { choices: [{ delta: { content: 'OK' } }] },
+        { choices: [], usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 } },
+      ]))
+
+      const result = await provider.chat([{ role: 'user', content: 'Hi' }])
+
+      expect(result.usage).toEqual({
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
+      })
+    })
+  })
+})
+
 // ===================== createProvider 测试 =====================
 
 describe('createProvider', () => {
@@ -334,6 +419,18 @@ describe('createProvider', () => {
       provider: 'mimo',
     })
     expect(provider.name).toBe('mimo')
+  })
+
+  /**
+   * 应该创建 OpenAI provider
+   */
+  it('应该创建 OpenAI provider', async () => {
+    const { createProvider } = await import('../src/services/index.js')
+    const provider = createProvider({
+      apiKey: 'test-key',
+      provider: 'openai',
+    })
+    expect(provider.name).toBe('openai')
   })
 
   /**

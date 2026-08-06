@@ -68,11 +68,10 @@ export interface ChatResult {
 }
 
 /** AI 服务提供商类型 */
-export type ProviderType = 'deepseek' | 'mimo'
+export type ProviderType = 'deepseek' | 'mimo' | 'openai'
 
 /** 聊天消息 */
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
-  reasoning_content?: string
 }
